@@ -71,3 +71,20 @@ describe("proxy — public host", () => {
     expect(response.headers.get("x-robots-tag")).toBeNull();
   });
 });
+
+describe("proxy — local development", () => {
+  it("serves /admin on loopback so the panel is developable", () => {
+    const response = proxy(request("/admin", "localhost:3000"));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-robots-tag")).toContain("noindex");
+  });
+
+  it("serves nested admin routes on loopback", () => {
+    expect(proxy(request("/admin/dashboard", "localhost:3000")).status).toBe(200);
+    expect(proxy(request("/admin/login", "127.0.0.1:3000")).status).toBe(200);
+  });
+
+  it("still 404s /admin on a real public domain", () => {
+    expect(proxy(request("/admin", ROOT)).status).toBe(404);
+  });
+});

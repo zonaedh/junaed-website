@@ -2,40 +2,41 @@
 > Overwrite this file at every checkpoint. Keep it short, specific and true.
 > A new agent must be able to continue from this file alone (plus AGENT_GUIDE.md).
 
-**Last updated:** 2026-11-20 23:30 (UTC+6) · **By:** saffron
+**Last updated:** 2026-11-20 23:45 (UTC+6) · **By:** saffron
 
 ## 1. Where We Are
-- **Current phase:** Phase 2 — Database, Auth & Admin Shell (not started)
-- **Phase progress:** Phase 0 partially complete (local only), Phase 1 complete
+- **Current phase:** Phase 2 complete (code + verification). Phase 3 is next.
+- **Phase progress:** Phase 0 local done (hosted half blocked on owner), Phase 1 complete, Phase 2 complete.
 - **Branch:** `main`
 - **Last commit:** see `git log --oneline -5`
-- **Build status:** ✅ passing (lint, typecheck, 19 tests, 25 routes) · **Deployed to:** nothing yet
+- **Build status:** passing (lint, typecheck, 47 tests, 25 routes) · **Deployed to:** nothing yet
 
 ## 2. What Was Just Done
-- Phase 1 finished: full public site ported to Next.js 16.4.6 App Router, 25 routes,
-  design tokens from the original HTML, mobile menu, contact form with server-side
-  Zod validation, sitemap, robots, 404/error pages.
-- `src/proxy.ts` implements host routing + admin noindex, verified with curl.
-- Phase 0 local foundation done: git repo on `main`, `.gitignore`, `.env.example`, `logs/`.
-- Full detail: `logs/phase-01-log.md`.
+- Phase 2: 19-table Drizzle schema, Argon2id passwords, hashed-token sessions,
+  TOTP 2FA with encrypted secrets and recovery codes, login lockout, RBAC,
+  audit logging, AES-256-GCM encryption, IP hashing.
+- Admin panel: login screen, sidebar shell with role-filtered nav, dashboard,
+  2FA enrolment page, and 13 section placeholders so no sidebar link 404s.
+- Six real bugs found and fixed — see `logs/phase-02-log.md` section 3. Two of
+  them (B2, B3) would have blocked deployment or silently broken login.
+- Full detail: `logs/phase-02-log.md`.
 
 ## 3. In Progress / Half-Finished
-- **Nothing is half-written.** The tree builds and is committed.
-- Phase 0's hosted half (GitHub, Vercel, DNS, accounts) is untouched — blocked on the owner.
+- **Nothing is half-written.** The tree builds, tests pass, and it is committed.
+- **The database has never been touched.** Schema written, migrations not generated.
+  This is the single most important thing to know about Phase 2's state.
 
 ## 4. Next Steps (do in this order)
-1. Read `AGENT_GUIDE.md`, then `logs/phase-01-log.md` §10, then `DECISIONS.md` (D-013 → D-017).
-2. **Phase 2, no DB needed yet:**
-   - `npm i drizzle-orm postgres` + `npm i -D drizzle-kit`
-   - `src/db/schema.ts` — all tables from MVP.md §3 (users, sessions, pages, posts,
-     categories, tags, post_tags, portfolio_items, services, media, leads, settings,
-     scripts, blocked_ips, activity_logs, page_views, alerts, redirects, backups_log).
-   - `src/lib/auth/password.ts` — Argon2id hash/verify (`@node-rs/argon2`).
-   - `src/lib/auth/session.ts` — create/verify/revoke, hashed tokens in DB, httpOnly cookie.
-   - `src/lib/rbac.ts` — `requireRole()`; roles Owner/Admin/Editor/Support.
-3. Replace `src/app/admin/page.tsx` with the real login screen + admin shell.
-   **Keep** the `robots: { index: false }` metadata.
-4. Once the owner supplies `DATABASE_URL`: `npm run db:generate`, `npm run db:migrate`, `npm run db:seed`.
+1. Read `AGENT_GUIDE.md`, then `logs/phase-02-log.md` sections 5 and 6, then
+   `DECISIONS.md` (D-018 to D-021).
+2. **If a `DATABASE_URL` exists in `.env.local`:** run `npm run db:generate`,
+   `npm run db:migrate`, `npm run db:seed`, then prove login + 2FA end to end.
+   Do this before building anything new — it is the untested half of Phase 2.
+3. **If it does not:** Phase 3 (public content from the database) can be written
+   against the schema, but every page will need a live DB to verify. Prefer getting
+   the database first.
+4. Phase 3 scope: settings + pages tables wired to the storefront, media library
+   on R2, admin Settings and Pages editors.
 
 ## 5. Needs From User (blocking items)
 
@@ -53,7 +54,7 @@ consent blocks scripts by default; one Telegram chat; placeholder photos accepta
    `junaedhossain.com` and `admin.junaedhossain.com`.
 3. **Neon Postgres** — neon.tech → New Project → region closest to your visitors →
    copy the **pooled** connection string (`DATABASE_URL`) and the **unpooled** one
-   (`DATABASE_URL_UNPOOLED`).
+   (`DATABASE_URL_UNPOOLED`). **This is the one that unblocks the most work.**
 4. **Cloudflare R2** — dash.cloudflare.com → R2 → Create bucket `junaed-media` →
    Manage R2 API Tokens → Create token with Object Read & Write → send Account ID,
    Access Key ID, Secret Access Key, and enable a public URL for the bucket.
@@ -79,9 +80,12 @@ with client permission. Placeholders are in place so nothing is blocked.
 ## 6. Blockers / Known Issues
 - **LAUNCH BLOCKER (not security):** the contact form validates but does not
   deliver anything (D-017). Phase 5 fixes it. Do not launch before then.
+- **No live database yet**, so migrations, seed, login and 2FA are unproven end to end.
 - **No remote repo**, so no CI, no branch protection, no preview deploys.
 - Lighthouse not measured — needs a deployed URL.
 - `npm install` requires `--legacy-peer-deps` because of the vitest 5 peer range (D-015).
+- **`.env.local` exists locally with generated secrets and an empty `DATABASE_URL`.**
+  It is gitignored. Fill in `DATABASE_URL` and `DATABASE_URL_UNPOOLED` to proceed.
 
 ## 7. Important Context
 - **Next.js 16.4.6** — middleware is `src/proxy.ts` exporting `proxy()`, not
@@ -90,9 +94,15 @@ with client permission. Placeholders are in place so nothing is blocked.
 - **Tailwind v4** — tokens live in `@theme` inside `src/app/globals.css`. There is no
   `tailwind.config.js`. Custom utilities use `@utility`.
 - **Cache Components is off** (D-013). Do not turn it on without reading the guide.
+- **A `"use client"` file must never import `@/lib/rbac` or `@/db`** — it drags the
+  Postgres driver into the browser bundle and fails the build (B1). Import
+  `@/lib/role-hierarchy` instead.
+- **The DB client is lazy** (D-018). Importing `@/db` has no side effects; the pool is
+  created on first query. Never add top-level connection code back.
+- **Admin host locally:** `http://localhost:3000/admin` now works (D-020).
+  To test real host routing: `curl -H "Host: admin.localhost:3000" http://localhost:3000/`
 - Seed content is in `src/lib/content.ts`; components take props, so Phase 3/4 only
   changes the data source.
-- Admin host locally: `curl -H "Host: admin.localhost:3000" http://localhost:3000/`
 - Real secrets are NOT in the repo. `.env.example` lists names only.
 
 ## 8. How to Verify State
@@ -100,4 +110,6 @@ with client permission. Placeholders are in place so nothing is blocked.
 git status; git log --oneline -10
 npm run lint; npm run typecheck; npm run test; npm run build
 ```
-Expect: clean tree, 19 tests passing, 25 routes built.
+Expect: clean tree, 47 tests passing, 25 routes built.
+If `npm run build` says "Another next build process is already running", delete
+`.next\lock` and `.next\dev\lock` — a killed dev server leaves them behind.

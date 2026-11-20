@@ -1,0 +1,58 @@
+import { db } from "@/db";
+import { activityLogs } from "@/db/schema";
+
+/**
+ * Activity log writer (MVP.md §8.3).
+ *
+ * Every admin mutation calls this. It must never throw into the caller: a
+ * failed audit write should not roll back a successful user action, but it
+ * must be visible in the server logs.
+ *
+ * `meta` must never contain secrets, password hashes or full request bodies.
+ * Record identifiers and changed field names only.
+ */
+
+export type ActivityInput = {
+  userId?: number | null;
+  action: string;
+  entity?: string | null;
+  entityId?: string | number | null;
+  meta?: Record<string, unknown> | null;
+  ipHash?: string | null;
+};
+
+export async function logActivity(input: ActivityInput): Promise<void> {
+  try {
+    await db.insert(activityLogs).values({
+      userId: input.userId ?? null,
+      action: input.action,
+      entity: input.entity ?? null,
+      entityId: input.entityId != null ? String(input.entityId) : null,
+      meta: input.meta ?? null,
+      ipHash: input.ipHash ?? null,
+    });
+  } catch (error) {
+    console.error("[audit] failed to write activity log", {
+      action: input.action,
+      entity: input.entity,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  }
+}
+
+/** Common action names, so filters in the admin UI stay consistent. */
+export const ACTIONS = {
+  loginSuccess: "auth.login.success",
+  loginFailed: "auth.login.failed",
+  loginLocked: "auth.login.locked",
+  logout: "auth.logout",
+  totpEnabled: "auth.totp.enabled",
+  totpDisabled: "auth.totp.disabled",
+  passwordChanged: "auth.password.changed",
+  passwordResetRequested: "auth.password.reset_requested",
+  passwordResetCompleted: "auth.password.reset_completed",
+  sessionRevoked: "auth.session.revoked",
+  staffInvited: "staff.invited",
+  staffUpdated: "staff.updated",
+  staffDeactivated: "staff.deactivated",
+} as const;

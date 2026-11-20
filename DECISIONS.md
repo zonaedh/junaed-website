@@ -80,3 +80,78 @@ Trade-off: The form is not usable in production until Phase 5. This is recorded
 in HANDOFF.md as a launch blocker.
 
 <!-- Add new decisions below -->
+
+---
+
+## D-018 — Database client is lazily initialised
+
+**Date:** 2026-11-20
+**Status:** Accepted
+
+**Context.** `next build` imports every route module to collect page data. The original
+`src/db/index.ts` created the Postgres pool at import time and threw if `DATABASE_URL`
+was missing, so a build could not run without production credentials. CI and Vercel
+preview deploys would both have failed.
+
+**Decision.** `db` is a Proxy that creates the pool on first property access. `closeDb()`
+is exported for scripts (seed, migrations). Importing `@/db` has no side effects.
+
+**Consequences.** Builds never need a database. A missing `DATABASE_URL` now surfaces on
+the first query instead of at import, so callers must handle it — the login action does
+(see D-021). Never reintroduce top-level connection code.
+
+---
+
+## D-019 — Pure logic is split from database-touching code
+
+**Date:** 2026-11-20
+**Status:** Accepted
+
+**Context.** The first RBAC and lockout tests imported the real modules, which pulled in
+the Postgres driver and failed without a database. Tests that need a database to run are
+tests that stop being run.
+
+**Decision.** Rules live in dependency-free modules (`role-hierarchy.ts`,
+`lockout-policy.ts`). The DB-touching modules (`rbac.ts`, `lockout.ts`) import and
+re-export them.
+
+**Consequences.** The security rules are unit-tested on every run with no infrastructure.
+This is the pattern for any new module that mixes policy with persistence.
+
+---
+
+## D-020 — `/admin` is reachable on loopback only
+
+**Date:** 2026-11-20
+**Status:** Accepted
+
+**Context.** The proxy 404s `/admin` on any non-admin host. Locally there is no admin
+subdomain, so the admin panel could not be opened at all — the whole phase was
+unverifiable in a browser.
+
+**Decision.** Loopback hosts (`localhost`, `127.0.0.1`, `::1`) pass `/admin` through,
+still carrying the noindex header. Every other host keeps the 404.
+
+**Consequences.** The panel is developable locally. Production behaviour is unchanged and
+pinned by tests. The loopback branch cannot run in production: a deployed request always
+carries the real domain in the Host header.
+
+---
+
+## D-021 — Login errors are generic except for lockout and infrastructure
+
+**Date:** 2026-11-20
+**Status:** Accepted
+
+**Context.** Two failure modes needed separating. A wrong password must not reveal
+whether an account exists. A broken deployment must not show a stack trace to a visitor,
+but must be loud in the logs.
+
+**Decision.** Every credential failure returns "Email or password is incorrect." Lockout
+names a wait time, because that is actionable and does not reveal account existence.
+Infrastructure failures return "Sign-in is temporarily unavailable." and log the real
+error server-side.
+
+**Consequences.** No stack trace, file path or missing-variable name can reach a browser
+through the login path. Any new action that touches the database or a secret must follow
+the same shape.

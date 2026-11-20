@@ -12,3 +12,51 @@ Format: `YYYY-MM-DD HH:MM | agent | phase | START/CHECKPOINT/END | one-line summ
 2026-11-20 23:24 | saffron | phase-01 | CHECKPOINT | Verified in browser: home desktop+mobile match original design, contact form submits, 0 console errors. curl verified admin noindex header, admin robots Disallow, public /admin 404.
 
 2026-11-20 23:32 | saffron | phase-00/01 | END | Phase 1 complete and tagged `phase-01-complete` (commit cc8990c). Phase 0 local foundation tagged `phase-00-local`; hosting/DNS/accounts pending owner. Docs written: logs/phase-00-log.md, logs/phase-01-log.md, HANDOFF, PROJECT_UPDATE, DECISIONS (D-013..D-017), MVP.md ticked. NOTE: MVP.md was briefly corrupted by a PowerShell UTF-8 round-trip and restored from the original text; verified 0 replacement chars, no BOM. Stopping before Phase 2. | cc8990c
+
+---
+
+## 2026-11-20 23:45 — Phase 2 complete (saffron)
+
+**Session goal:** build Phase 2 — database schema, auth, admin shell.
+
+**Outcome:** Complete in code and verified as far as possible without a live database.
+
+### Delivered
+- `src/db/schema.ts` — 19 tables per MVP.md §3, Drizzle + Postgres.
+- `drizzle.config.ts`, `src/db/index.ts` (lazy client), `src/db/seed.ts`.
+- Auth: `password.ts` (Argon2id, OWASP params), `session.ts` (hashed tokens,
+  httpOnly cookie, 7-day sliding), `totp.ts` (encrypted secrets, recovery codes),
+  `lockout.ts` + `lockout-policy.ts`, `rbac.ts` + `role-hierarchy.ts`.
+- `src/lib/audit.ts`, `src/lib/security/encryption.ts` (AES-256-GCM),
+  `src/lib/security/hash.ts` (salted daily IP hashes).
+- Admin: login screen + action, shell with role-filtered sidebar, dashboard,
+  2FA enrolment, 13 section placeholders.
+- `.env.local` created locally with generated secrets (gitignored, empty DATABASE_URL).
+
+### Verification
+- `npm run lint` clean · `npm run typecheck` clean · `npm run test` 47 passed ·
+  `npm run build` passed (25 routes) · `npm audit` 0 vulnerabilities.
+- Browser: `/admin/login` renders with 0 console errors; form failure is handled
+  with a generic message and the real cause is logged server-side.
+- Host routing re-verified: admin host noindex header present, public host 404s
+  `/admin`, `/dashboard` redirects to `/login`, admin `robots.txt` disallows all.
+
+### Bugs found and fixed
+1. Client component imported `rbac.ts` → Postgres driver in the browser bundle.
+2. `next build` required a live database (import-time pool creation).
+3. **Login validation rejected `null` for the absent 2FA field** — every first-step
+   login failed before reaching the database, showing "wrong password".
+4. A missing env var leaked a stack trace into the browser.
+5. `/admin` was unreachable on localhost, making the panel undevelopable.
+6. otplib v13 removed the `authenticator` object the code was written against.
+
+### Notes for the next session
+- The database has never been touched. Migrations are not generated.
+- `npm run build` can fail with "Another next build process is already running"
+  after a killed dev server; delete `.next\lock` and `.next\dev\lock`.
+- PowerShell heredocs mangle backticks — write files with the editor tools or Node,
+  never `Set-Content` with an inline template literal containing backticks.
+
+### Next
+Phase 3, but only after a `DATABASE_URL` exists. Proving login + 2FA end to end is
+the first thing to do when the database arrives.

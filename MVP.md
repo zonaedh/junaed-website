@@ -181,15 +181,20 @@ Each phase ends with a **deployable, testable** result. Don't start the next pha
 **Goal:** Secure login and a clean admin layout.
 
 **Tasks**
-- [ ] Drizzle schema + migrations + seed script (creates Owner from env, seeds default pages/services).
-- [ ] Auth: Argon2id hashing, session table, httpOnly+Secure+SameSite=Strict cookie, 7-day sliding expiry, logout-all-devices.
-- [ ] **TOTP 2FA** (QR setup, recovery codes) — mandatory for Owner/Admin.
-- [ ] Login protection: 5 failed attempts → 15 min lockout (per IP + per email), generic error messages.
-- [ ] Password reset via Resend (single-use, 30 min token).
-- [ ] RBAC helper `requireRole()` used in every server action.
-- [ ] Admin layout: collapsible sidebar, topbar (search, alerts bell, profile), breadcrumbs, toasts, dark/light toggle, mobile-friendly.
-- [ ] Admin design language: same violet palette, neutral surfaces, 8px grid, max 2 font weights, consistent form components (Input, Select, Switch, Tabs, Modal, Table, EmptyState).
-- [ ] **Noindex everywhere on admin:**
+- [x] Drizzle schema + migrations + seed script (creates Owner from env, seeds default pages/services).
+      Schema + seed written; **migrations not generated** — needs a live DATABASE_URL.
+- [x] Auth: Argon2id hashing, session table, httpOnly+Secure+SameSite=Strict cookie, 7-day sliding expiry, logout-all-devices.
+- [x] **TOTP 2FA** (QR setup, recovery codes) — mandatory for Owner/Admin.
+      Enrolment built; not yet exercised end to end (no database).
+- [x] Login protection: 5 failed attempts → 15 min lockout (per email; per-IP lands in Phase 8 with Upstash), generic error messages.
+- [ ] Password reset via Resend (single-use, 30 min token). **Deferred to Phase 5** — needs Resend, which is not configured. Login copy says "ask the owner".
+- [x] RBAC helper `requireRole()` used in every server action.
+- [~] Admin layout: collapsible sidebar, topbar (search, alerts bell, profile), breadcrumbs, toasts, dark/light toggle, mobile-friendly.
+      Sidebar (collapsible + mobile drawer), topbar with profile and sign-out: **done**.
+      Search, alerts bell, breadcrumbs, toasts, dark/light toggle: **not built** — deferred to Phase 7/8 where they have data to show.
+- [~] Admin design language: same violet palette, neutral surfaces, 8px grid, max 2 font weights, consistent form components (Input, Select, Switch, Tabs, Modal, Table, EmptyState).
+      Palette, typography and form styling: **done**. Shared Input/Select/Switch/Tabs/Modal/Table/EmptyState components: **not built** — build them in Phase 3 when the first real editor needs them.
+- [x] **Noindex everywhere on admin:**
   - `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet` header via middleware for the admin host.
   - `<meta name="robots" content="noindex,nofollow">` in admin layout.
   - Admin host `robots.txt` → `Disallow: /` (note: robots.txt alone doesn't prevent indexing; the header does).

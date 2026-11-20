@@ -27,6 +27,23 @@ function isAdminHost(host: string | null): boolean {
   return hostname.startsWith(ADMIN_HOST_PREFIX);
 }
 
+/**
+ * Loopback hosts, used only so the admin panel is reachable during local
+ * development. On localhost there is no admin subdomain to route by, so
+ * /admin/... is served directly. This branch can never run in production:
+ * a deployed request arrives with the real domain in the Host header.
+ */
+function isLoopbackHost(host: string | null): boolean {
+  if (!host) return false;
+  const hostname = host.split(":")[0]?.toLowerCase() ?? "";
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]" ||
+    hostname === "::1"
+  );
+}
+
 /** Paths that must stay reachable on the admin host without rewriting. */
 const ADMIN_PASSTHROUGH = ["/_next", "/favicon.ico", "/robots.txt", "/api"];
 
@@ -67,6 +84,17 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/admin/") ||
     pathname.startsWith("/api/admin")
   ) {
+    // Local development exception: there is no admin subdomain on localhost,
+    // so /admin is the only way to open the panel. Still noindexed, because
+    // the header costs nothing and keeps dev and prod behaviour aligned.
+    if (isLoopbackHost(host)) {
+      const response = NextResponse.next();
+      response.headers.set(
+        "x-robots-tag",
+        "noindex, nofollow, noarchive, nosnippet",
+      );
+      return response;
+    }
     return new NextResponse("Not found", { status: 404 });
   }
 
