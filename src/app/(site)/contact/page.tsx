@@ -4,6 +4,7 @@ import { Reveal } from "@/components/ui/reveal";
 import { ContactForm } from "@/components/site/contact-form";
 import { getPageContent } from "@/lib/pages";
 import { getSettings } from "@/lib/settings";
+import { createChallenge } from "@/lib/contact/captcha";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -17,6 +18,9 @@ export default async function ContactPage() {
     getPageContent("contact"),
     getSettings(),
   ]);
+  // The captcha challenge is generated on the server so the answer never
+  // reaches the client in a readable form.
+  const challenge = createChallenge();
   return (
     <section className="bg-surface py-14 lg:py-[75px]">
       <div className="wrap grid gap-10 lg:grid-cols-2 lg:gap-[50px]">
@@ -66,7 +70,12 @@ export default async function ContactPage() {
         </Reveal>
 
         <Reveal delay={80}>
-          <ContactForm />
+          <ContactForm
+            initialChallenge={{
+              question: challenge.question,
+              token: challenge.token,
+            }}
+          />
         </Reveal>
       </div>
     </section>

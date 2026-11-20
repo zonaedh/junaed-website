@@ -8,6 +8,8 @@ const valid = {
   message: "I need help with technical SEO on a WordPress site.",
   website: "",
   startedAt: 1_700_000_000_000,
+  captchaToken: "signed-token",
+  captchaAnswer: "11",
 };
 
 describe("contactSchema", () => {
@@ -59,7 +61,20 @@ describe("contactSchema", () => {
     if (result.success) expect(result.data.service).toBeUndefined();
   });
 
-  it("strips HTML tags from the message body is NOT done here (Phase 5 sanitises)", () => {
+  it("rejects a submission with no captcha token or answer", () => {
+    const noToken = contactSchema.safeParse({ ...valid, captchaToken: "" });
+    expect(noToken.success).toBe(false);
+    const noAnswer = contactSchema.safeParse({ ...valid, captchaAnswer: "" });
+    expect(noAnswer.success).toBe(false);
+  });
+
+  it("turns an empty phone into undefined", () => {
+    const result = contactSchema.safeParse({ ...valid, phone: "" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.phone).toBeUndefined();
+  });
+
+  it("stores the message body as-is; escaping happens at render", () => {
     // Documents current behaviour: the schema stores text as-is and escaping
     // happens at render. Kept explicit so nobody assumes sanitisation exists.
     const result = contactSchema.safeParse({

@@ -1,7 +1,7 @@
 # PROJECT_UPDATE.md
 Human-readable status of **junaedhossain.com + admin panel**. Update at every phase end and major event.
 
-**Last updated:** 2026-11-21 · **Overall progress:** 4.6 / 10 phases
+**Last updated:** 2026-11-21 · **Overall progress:** 5.6 / 10 phases
 
 ## Phase Status
 | # | Phase | Status | Started | Completed | Log |
@@ -11,7 +11,7 @@ Human-readable status of **junaedhossain.com + admin panel**. Update at every ph
 | 2 | DB, Auth & Admin Shell | ✅ Complete (verified end-to-end with local PGlite) | 2026-11-20 | 2026-11-20 | [phase-02](logs/phase-02-log.md) |
 | 3 | CMS Core (Pages, Settings, Media) | ✅ Complete (media on local disk; R2 is an env swap) | 2026-11-21 | 2026-11-21 | [phase-03](logs/phase-03-log.md) |
 | 4 | Blog & Portfolio | ✅ Complete (verified end-to-end) | 2026-11-21 | 2026-11-21 | [phase-04](logs/phase-04-log.md) |
-| 5 | Contact, Leads, Notifications | ⬜ | | | |
+| 5 | Contact, Leads, Notifications | ✅ Complete (notifications dormant until keys supplied) | 2026-11-21 | 2026-11-21 | [phase-05](logs/phase-05-log.md) |
 | 6 | On-Page SEO | ⬜ | | | |
 | 7 | Analytics, Tracking, Dashboard | ⬜ | | | |
 | 8 | Security, IP Block, Logs, Staff | ⬜ | | | |
@@ -25,6 +25,16 @@ Legend: ⬜ not started · 🟨 in progress · ✅ complete · ⛔ blocked
 - Repo: not created · Vercel project: not created
 
 ## Changelog (newest first)
+- 2026-11-21 — **Phase 5 complete.** The contact form is a working pipeline: honeypot,
+  minimum fill time, signed stateless maths captcha (D-032), rate limit, and a spam
+  scorer that accepts silently rather than teaching bots which signal fired (D-033).
+  Leads persist with IP and message hashes, never a raw IP. Telegram and Resend
+  adapters are fully written and dormant — supplying keys is the whole remaining job
+  (D-034). Admin inbox at `/admin/leads` with status filters, search, unread sidebar
+  badge, detail page with private notes, and a CSV export. Verified end to end in a
+  browser: real submission persisted, wrong captcha rejected with values preserved,
+  spam blocked and not stored, status and notes saved, export returned `200 text/csv`.
+  lint/typecheck/146 tests/build all pass.
 - 2026-11-21 — **Phase 4 complete.** Blog (Tiptap editor, slug derivation, word count,
   reading time, tags, categories, draft/publish) and Portfolio (admin CRUD, featured flag,
   results, year) both verified end to end in a browser. Public blog, portfolio and the home

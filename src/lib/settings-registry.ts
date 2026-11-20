@@ -172,6 +172,31 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     default: false,
     help: "When on, the public site shows a maintenance notice.",
   },
+  {
+    key: "contact.bannedKeywords",
+    label: "Spam keywords",
+    kind: "textarea",
+    group: "Contact",
+    default: "",
+    maxLength: 4000,
+    help: "One per line. A message containing these scores as spam. Leave empty to use the built-in list.",
+  },
+  {
+    key: "notify.telegramEnabled",
+    label: "Telegram notifications",
+    kind: "boolean",
+    group: "Contact",
+    default: true,
+    help: "Send a Telegram message for each new enquiry. Requires TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID.",
+  },
+  {
+    key: "notify.emailEnabled",
+    label: "Email notifications",
+    kind: "boolean",
+    group: "Contact",
+    default: true,
+    help: "Email you and auto-reply to the visitor. Requires RESEND_API_KEY.",
+  },
 ] as const;
 
 export const SETTING_GROUPS = [
@@ -210,6 +235,9 @@ export type SiteSettings = {
   emailFromAddress: string;
   analyticsRetentionMonths: number;
   maintenanceEnabled: boolean;
+  bannedKeywords: string;
+  telegramEnabled: boolean;
+  emailEnabled: boolean;
 };
 
 /** Map a registry key to the field name on SiteSettings. */
@@ -230,6 +258,9 @@ export const SETTING_FIELD_NAMES: Record<string, keyof SiteSettings> = {
   "email.fromAddress": "emailFromAddress",
   "analytics.retentionMonths": "analyticsRetentionMonths",
   "maintenance.enabled": "maintenanceEnabled",
+  "contact.bannedKeywords": "bannedKeywords",
+  "notify.telegramEnabled": "telegramEnabled",
+  "notify.emailEnabled": "emailEnabled",
 };
 
 /**

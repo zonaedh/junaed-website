@@ -69,4 +69,9 @@ export const ACTIONS = {
   portfolioUpdated: "portfolio.updated",
   portfolioDeleted: "portfolio.deleted",
   portfolioReordered: "portfolio.reordered",
+  leadStatus: "lead.status",
+  leadNotes: "lead.notes",
+  leadReply: "lead.reply",
+  leadDelete: "lead.deleted",
+  leadExported: "lead.exported",
 } as const;

@@ -1,4 +1,4 @@
-# DECISIONS.md
+﻿# DECISIONS.md
 Short decision records. Don't re-debate "Accepted" items without the user's approval.
 Format: **ID · Title · Status · Date** → Decision → Why → Trade-off.
 
@@ -394,3 +394,59 @@ actually there.
 **Consequences.** Date formatting moved to the call site, which is where the
 display format belongs anyway. Any future cached query returning dates must
 follow the same rule.
+---
+
+## D-032 — The contact captcha is a signed stateless token
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** A maths captcha needs the server to know the right answer when the form
+comes back, but a contact form is the last place you want a session store or a table
+of pending challenges — it is anonymous, high-volume and disposable.
+
+**Decision.** The challenge is rendered as `question + token`, where the token is an
+HMAC over the answer, a nonce and an expiry, signed with `CAPTCHA_SECRET`. The server
+verifies by recomputing the HMAC and checking expiry. Nothing is stored.
+
+**Consequences.** No cleanup job, no table, no session. The trade is that a token
+cannot be invalidated early, which is irrelevant for a 15-minute challenge. Rotating
+`CAPTCHA_SECRET` invalidates every outstanding challenge at once.
+
+---
+
+## D-033 — Spam is scored and silently accepted, never rejected with a reason
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** The obvious implementation rejects a spammy submission with "your message
+looks like spam". That tells a bot exactly which signal fired and lets it iterate.
+
+**Decision.** The spam scorer returns a score and reasons. Above threshold the action
+returns the same success response a real submission gets and stores nothing. The
+visitor sees "Message received"; the bot learns nothing.
+
+**Consequences.** A false positive is invisible to a legitimate visitor, which is the
+real cost. The threshold is deliberately conservative and the keyword list is
+owner-editable in Settings, so a legitimate message caught by a keyword can be
+corrected without a deploy.
+
+---
+
+## D-034 — Notification adapters are dormant drivers, not stubs
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** Telegram and Resend both need credentials the owner has not supplied yet.
+The choice was between stubbing the calls out and building the real integration behind
+a configuration check.
+
+**Decision.** Same pattern as the media storage adapter (D-027): the adapter is fully
+implemented, and when its credentials are absent it logs and returns without throwing.
+Supplying the key is the only remaining step.
+
+**Consequences.** The contact pipeline is complete and correct today; notifications
+turn on with a key and a toggle, no code change. The cost is that the live provider
+path is unverified until someone supplies credentials.

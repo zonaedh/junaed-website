@@ -71,9 +71,11 @@ function canSee(userRole: string, required?: string): boolean {
 
 export function AdminShell({
   user,
+  unreadLeads = 0,
   children,
 }: {
   user: SessionUser;
+  unreadLeads?: number;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -154,6 +156,18 @@ export function AdminShell({
                           {item.icon}
                         </span>
                         {!collapsed ? <span>{item.label}</span> : null}
+                        {item.href === "/leads" && unreadLeads > 0 ? (
+                          <span
+                            className={`ml-auto rounded-full px-1.5 py-0.5 text-[11px] font-bold ${
+                              active
+                                ? "bg-white/20 text-white"
+                                : "bg-violet-100 text-violet-800"
+                            }`}
+                            aria-label={`${unreadLeads} unread`}
+                          >
+                            {unreadLeads > 99 ? "99+" : unreadLeads}
+                          </span>
+                        ) : null}
                       </Link>
                     </li>
                   );

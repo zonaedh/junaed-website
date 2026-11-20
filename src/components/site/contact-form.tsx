@@ -1,11 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { submitContact } from "@/app/(site)/contact/actions";
+import { refreshChallenge, submitContact } from "@/app/(site)/contact/actions";
 import type { ContactState } from "@/lib/validation/contact";
 import { services } from "@/lib/content";
-
-const initialState: ContactState = { status: "idle" };
 
 const fieldBase =
   "w-full rounded-[11px] border bg-[#fcfbff] px-4 py-[15px] text-base leading-normal outline-none transition placeholder:text-muted/70 focus:border-violet-400 focus:ring-[3px] focus:ring-violet-100";
@@ -15,21 +13,41 @@ function fieldClass(hasError: boolean) {
   return `${fieldBase} ${hasError ? "border-red-400" : "border-line"}`;
 }
 
-export function ContactForm() {
-  const [state, formAction, pending] = useActionState(
-    submitContact,
-    initialState,
-  );
+type Challenge = { question: string; token: string };
+
+export function ContactForm({ initialChallenge }: { initialChallenge: Challenge }) {
+  const [state, formAction, pending] = useActionState(submitContact, {
+    status: "idle",
+  } as ContactState);
+
   // Timestamp is captured on mount, not in the server render, so the
   // min-fill-time check measures real human typing time.
   const [startedAt] = useState(() => Date.now());
   const successRef = useRef<HTMLDivElement>(null);
+
+  // The challenge comes from the server. After a failed attempt the action
+  // returns a fresh one, so the visitor can retry without a page reload.
+  // Derived during render rather than synced in an effect: the action's
+  // challenge wins when present, otherwise the server-rendered one stands.
+  const [refreshed, setRefreshed] = useState<Challenge | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const challenge = state.challenge ?? refreshed ?? initialChallenge;
 
   useEffect(() => {
     if (state.status === "success") {
       successRef.current?.focus();
     }
   }, [state.status]);
+
+  async function onRefresh() {
+    setRefreshing(true);
+    try {
+      const next = await refreshChallenge();
+      setRefreshed(next);
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   if (state.status === "success") {
     return (
@@ -116,6 +134,28 @@ export function ContactForm() {
       </div>
 
       <div className="mb-4">
+        <label htmlFor="phone" className={labelBase}>
+          Phone <span className="font-normal text-muted">(optional)</span>
+        </label>
+        <input
+          id="phone"
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          defaultValue={values.phone}
+          aria-invalid={errors.phone ? true : undefined}
+          aria-describedby={errors.phone ? "phone-error" : undefined}
+          className={fieldClass(Boolean(errors.phone))}
+          placeholder="+880 1XXX XXXXXX"
+        />
+        {errors.phone ? (
+          <p id="phone-error" className="mt-1.5 text-sm text-red-700">
+            {errors.phone}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="mb-4">
         <label htmlFor="service" className={labelBase}>
           What do you need?{" "}
           <span className="font-normal text-muted">(optional)</span>
@@ -156,6 +196,41 @@ export function ContactForm() {
             {errors.message}
           </p>
         ) : null}
+      </div>
+
+      {/* Math captcha — server-signed, 10-minute expiry. */}
+      <div className="mb-4">
+        <label htmlFor="captchaAnswer" className={labelBase}>
+          {challenge.question}
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            id="captchaAnswer"
+            name="captchaAnswer"
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            required
+            aria-invalid={errors.captcha ? true : undefined}
+            aria-describedby={errors.captcha ? "captcha-error" : undefined}
+            className={`${fieldClass(Boolean(errors.captcha))} max-w-[120px]`}
+            placeholder="Answer"
+          />
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="rounded-[11px] border border-line px-3 py-2 text-sm font-semibold text-muted transition hover:border-violet-200 hover:text-violet-700 disabled:opacity-50"
+          >
+            {refreshing ? "…" : "New question"}
+          </button>
+        </div>
+        {errors.captcha ? (
+          <p id="captcha-error" className="mt-1.5 text-sm text-red-700">
+            {errors.captcha}
+          </p>
+        ) : null}
+        <input type="hidden" name="captchaToken" value={challenge.token} />
       </div>
 
       {/* Honeypot — visually hidden and hidden from assistive tech. */}
