@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
 import { ButtonLink } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Reveal } from "@/components/ui/reveal";
-import { ProjectCard } from "@/components/site/project-card";
-import { projects } from "@/lib/content";
+import { listPublishedPortfolio } from "@/lib/portfolio/repository";
 
 export const metadata: Metadata = {
   title: "Portfolio",
@@ -12,7 +13,16 @@ export const metadata: Metadata = {
   alternates: { canonical: "/portfolio" },
 };
 
-export default function PortfolioPage() {
+/**
+ * Public portfolio index (MVP.md §4.2).
+ *
+ * Reads published items from the database, ordered by the editor's sort order.
+ * A project with a cover image shows it; one without falls back to a plain
+ * card rather than a broken frame.
+ */
+export default async function PortfolioPage() {
+  const projects = await listPublishedPortfolio();
+
   return (
     <>
       <section className="pt-10 pb-12 lg:pt-16 lg:pb-14">
@@ -33,20 +43,67 @@ export default function PortfolioPage() {
 
       <section className="pb-16 lg:pb-[85px]">
         <div className="wrap">
-          <ul className="grid gap-[22px] sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project, index) => (
-              <Reveal as="li" key={project.slug} delay={index * 70}>
-                <ProjectCard project={project} />
-              </Reveal>
-            ))}
-          </ul>
+          {projects.length === 0 ? (
+            <p className="rounded-[18px] border border-dashed border-line px-5 py-14 text-center text-sm text-muted">
+              No case studies published yet.
+            </p>
+          ) : (
+            <ul className="grid gap-[22px] sm:grid-cols-2 lg:grid-cols-3">
+              {projects.map((project, index) => (
+                <Reveal as="li" key={project.id} delay={index * 70}>
+                  <article className="group relative flex h-full flex-col overflow-hidden rounded-[23px] border border-line transition duration-200 ease-out focus-within:border-violet-300 hover:-translate-y-1 hover:shadow-soft">
+                    {project.coverUrl ? (
+                      <div className="overflow-hidden">
+                        <Image
+                          src={project.coverUrl}
+                          alt={project.coverAlt}
+                          width={800}
+                          height={560}
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          className="h-[210px] w-full object-cover sm:h-[230px]"
+                        />
+                      </div>
+                    ) : (
+                      <div className="grid h-[210px] place-items-center bg-linear-140 from-violet-950 to-violet-500 sm:h-[230px]">
+                        <span
+                          aria-hidden="true"
+                          className="font-display text-4xl font-extrabold text-white/25"
+                        >
+                          {project.year || "—"}
+                        </span>
+                      </div>
+                    )}
 
-          <p className="mt-8 max-w-[640px] text-sm leading-[1.7] text-muted">
-            <strong className="font-bold text-ink">Note:</strong> the projects
-            above are illustrative placeholders. Real case studies with client
-            names, screenshots and measured results replace them once approved
-            for publication.
-          </p>
+                    <div className="flex flex-1 flex-col p-[22px]">
+                      <h2 className="mb-2 text-[20px] leading-[1.25] tracking-[-0.03em]">
+                        <Link
+                          href={`/portfolio/${project.slug}`}
+                          className="after:absolute after:inset-0 after:content-['']"
+                        >
+                          {project.title}
+                        </Link>
+                      </h2>
+                      <p className="mb-4 text-[15px] leading-[1.75] text-muted">
+                        {project.summary}
+                      </p>
+                      {project.tags.length > 0 ? (
+                        <ul className="mt-auto flex flex-wrap gap-[7px]">
+                          {project.tags.map((tag) => (
+                            <li
+                              key={tag}
+                              className="rounded-full bg-violet-50 px-[9px] py-1.5 text-xs font-bold text-violet-800"
+                            >
+                              {tag}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  </article>
+                </Reveal>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
 
