@@ -155,3 +155,242 @@ error server-side.
 **Consequences.** No stack trace, file path or missing-variable name can reach a browser
 through the login path. Any new action that touches the database or a secret must follow
 the same shape.
+
+---
+
+## D-022 — Local dev database is PGlite behind the real `pg` driver
+
+**Date:** 2026-11-20
+**Status:** Accepted
+
+**Context.** Phase 3's definition of done is "change it in admin, see it live in
+seconds". That cannot be verified without a database. No Docker, no Postgres server
+and no `psql` were available on the machine, and the Neon project was not created
+yet. Building Phase 3 blind would have produced unverifiable work.
+
+**Decision.** `scripts/db-local.ts` runs PGlite (PostgreSQL compiled to WebAssembly)
+and exposes it over the Postgres wire protocol on `127.0.0.1:5433`. Application code
+connects with the ordinary `pg` driver, so `src/db/index.ts`, Drizzle, the schema
+and every query are identical to production. Production still uses Neon — only the
+connection string differs.
+
+**Why `pg` and not `postgres`.** Both work against Neon. Only `pg` sends enum
+parameters correctly through PGlite's socket layer: the `postgres` driver produced
+"unnamed prepared statement does not exist" on any query binding an enum value. One
+driver everywhere means local and production run the same code path.
+
+**Rejected alternatives.**
+- *Embedded Postgres binaries* — the bundled Windows `initdb` crashes with an access
+  violation in this environment, with and without spaces in the path.
+- *Docker* — not installed.
+- *Writing Phase 3 against the schema without a DB* — no way to prove the loop.
+
+**Consequences.** The full schema has now been migrated and seeded against a real
+Postgres for the first time, and login + 2FA are proven end to end. PGlite is
+single-writer and serialises queries: fine for one developer, never for production.
+It is a dev dependency and is never imported by application code. Data lives in
+`.pglite/` (gitignored).
+
+---
+
+## D-023 — Login redirects are host-aware
+
+**Date:** 2026-11-20
+**Status:** Accepted
+
+**Context.** Login redirected to `/dashboard`, which only resolves on the admin host
+because the proxy rewrites it into the admin tree. On loopback there is no rewrite, so
+a successful login landed on a 404. Logout had the same defect with `/login`.
+
+**Decision.** The login action, the logout action and the login page each detect the
+host the same way the proxy does and redirect to `/admin/...` on loopback,
+`/...` everywhere else.
+
+**Consequences.** Login and logout work on both the admin host and localhost. The
+duplication is three small copies of one host check; if a fourth caller appears it
+should move into a shared helper.
+
+---
+
+## D-024 — Admin links and redirects are host-aware
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** Every admin nav link and every `requireRole()` redirect was
+root-absolute (`/settings`, `/login`, `/dashboard`). That is correct on the
+admin host, where the proxy rewrites those paths into the admin tree. On loopback
+there is no rewrite, so the entire panel 404'd the moment you clicked anything —
+including the sidebar, which made the Phase 3 editors unreachable locally.
+
+**Decision.** `src/lib/admin-path.ts` exposes `getAdminBase()`, which returns
+`""` on the admin host and `"/admin"` on loopback. Server components and
+actions use it directly; the client shell derives the same value from
+`usePathname().startsWith("/admin")`. `requireRole()` in `rbac.ts` now
+redirects through it, so the guard is correct on both hosts.
+
+**Consequences.** The panel is fully navigable on localhost, which is what made
+Phase 3 verifiable at all. Production URLs are unchanged: on the admin host the
+base is empty and every path is exactly what it was. The client-side detection is
+sound because the only way to reach an admin route on loopback is through the
+`/admin` prefix.
+
+---
+
+## D-025 — Settings and page content are registry-driven
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** `settings` is key/value JSONB and `pages.content` is a JSONB
+blob. Both are flexible and both rot silently: rename a key, miss one call site,
+and the public site falls back to a default with no error anywhere.
+
+**Decision.** Every setting and every page field is declared once in a registry
+(`settings-registry.ts`, `pages-definitions.ts`) with its type, label,
+default and max length. The admin form is generated from the registry, validation
+loops over it, and the public reader resolves stored JSONB against it — coercing
+each value and falling back to the documented default when a row is missing or
+malformed.
+
+**Why the registries are separate files from the readers.** The admin forms are
+`"use client"`. Importing `lib/settings.ts` or `lib/pages.ts` from a client
+component pulls in `@/db` and therefore `pg`, which fails the build (B1). The
+registries are pure; the readers import them and add the database. This is the
+same split that `role-hierarchy.ts` already uses.
+
+**Consequences.** Adding a setting or a page field is one entry, not four
+coordinated edits. A missing row renders the default instead of `undefined`. A
+page saved as `draft` renders its defaults publicly, so an editor cannot leak
+work in progress by accident — verified in the browser.
+
+---
+
+## D-026 — Revalidation uses `{ expire: 0 }`, not `"max"`
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** Next 16 requires a second argument to `revalidateTag`. The docs
+recommend `profile="max"`, which serves stale content while revalidating in the
+background for up to a year.
+
+**Decision.** Admin writes call `revalidateTag(tag, { expire: 0 })`.
+
+**Consequences.** The next request is a blocking revalidate, so the editor sees
+their change on the very next page load. `"max"` would have been faster under
+load but would have shown the old copy for an indeterminate window — unacceptable
+when the phase's definition of done is "see it live within seconds". Settings and
+pages are read rarely and change rarely; the blocking cost is irrelevant at this
+scale.
+
+---
+
+## D-027 — Media storage is an adapter with a local and an R2 driver
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** The media library was blocked for an entire phase waiting on
+Cloudflare R2 credentials. That is a bad trade: the upload pipeline, the picker,
+the image fields and every usage check are identical regardless of where the
+bytes land. Only the write itself depends on R2.
+
+**Decision.** `src/lib/media/storage.ts` defines one `StorageDriver` interface
+(`put`, `remove`) with two implementations. The local driver writes to
+`public/uploads/`; the R2 driver uses the S3 API against the bucket. Selection
+is by environment: R2 wins whenever it is configured, in every environment.
+Without R2, development falls back to disk and **production throws at boot**.
+
+**Consequences.** The library is buildable and verifiable today with no
+credentials, and turning on R2 is five environment variables rather than a
+rewrite. The production throw is deliberate: Vercel's filesystem is ephemeral,
+so a deploy that silently accepted uploads to disk would lose every file on the
+next cold start. `public/uploads/` is gitignored, and the local driver resolves
+and bounds every key so a crafted filename cannot escape the uploads directory.
+
+---
+
+## D-028 — Uploads are re-encoded, not stored as received
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** A media library that stores uploaded bytes verbatim inherits every
+problem the uploader brings: EXIF GPS coordinates from a phone photo, a 6 MB
+JPEG used as a 480px thumbnail, and a `.jpg` that is actually a PHP script.
+
+**Decision.** `src/lib/media/process.ts` runs every upload through `sharp`:
+MIME is detected from the **file's own bytes**, not the declared type or the
+extension; the image is auto-rotated, re-encoded to WebP, and a 480px thumbnail
+is generated alongside it. Re-encoding drops EXIF as a side effect, which is
+asserted in the tests rather than assumed.
+
+**Consequences.** Stored files are always WebP and always safe to serve. The
+original is not retained, so a future need for the source file would require
+changing this. Dimensions are recorded on the row, which is what lets the public
+site reserve layout space and avoid a shift on load.
+
+---
+
+## D-029 — A media row cannot be deleted while anything references it
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** Image fields store a media **id**. Deleting a row that a page still
+points at leaves that page rendering a gap, with no error anywhere — the same
+silent-rot failure D-025 exists to prevent, one layer down.
+
+**Decision.** `src/lib/media/usage.ts` scans every place an id can be referenced
+before a delete is permitted: page content fields declared as `image` in the
+registry, settings declared as `image`, post covers and OG images, and portfolio
+covers and OG images. The admin shows "Used in …" with links, and the delete
+control is replaced by that explanation when usage is non-empty.
+
+**Consequences.** Because the page scan is registry-driven, adding an image
+field makes it usage-tracked automatically. Deletes are soft (`deleted_at`), so
+a mistaken delete is recoverable in the database even though the UI refuses the
+common case.
+
+---
+
+## D-030 — Blog and portfolio detail pages are dynamic; indexes are cached by tag
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** The first build of `/blog/[slug]` prerendered it as SSG. That
+contradicts the phase's own definition of done: a post published in admin would
+404 on the public site until the next deploy. The build output made the
+contradiction visible, which is the only reason it was caught.
+
+**Decision.** Detail routes (`/blog/[slug]`, `/portfolio/[slug]`) render
+dynamically. Index and listing queries go through `unstable_cache` tagged
+`posts` / `portfolio` (plus a per-slug tag), and admin writes call
+`revalidateTag(tag, { expire: 0 })` per D-026.
+
+**Consequences.** A newly published post is reachable immediately and its index
+entry appears on the next request. The cost is a database read per detail page
+view, which is the correct trade for a site at this scale and is the only way
+"publish and it is live" can be true.
+
+---
+
+## D-031 — `unstable_cache` results are typed as serialised, not as the row
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** `unstable_cache` serialises its return value. A `Date` field comes
+back as a string at runtime while the TypeScript type still claimed `Date`. The
+type was lying, and any `.toISOString()` on it would have thrown in production
+while typechecking cleanly.
+
+**Decision.** Repository types declare the serialised shape (`publishedAt:
+string | null`) and call sites format from that. The type now describes what is
+actually there.
+
+**Consequences.** Date formatting moved to the call site, which is where the
+display format belongs anyway. Any future cached query returning dates must
+follow the same rule.

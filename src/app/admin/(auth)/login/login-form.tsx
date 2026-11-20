@@ -14,6 +14,13 @@ export function LoginForm() {
   // Once the server says "totp_required" we reveal the code field and keep
   // the email the user already typed.
   const [email, setEmail] = useState("");
+  /**
+   * Password is controlled for the same reason email is: React 19 resets
+   * uncontrolled fields after a form action completes, so when the first
+   * submit returns `totp_required` the password input would be wiped and the
+   * user forced to retype it. Holding it in state survives the re-render.
+   */
+  const [password, setPassword] = useState("");
   const codeRef = useRef<HTMLInputElement>(null);
 
   const needsTotp = state.status === "totp_required";
@@ -66,6 +73,8 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
           className={fieldClass}
           placeholder="••••••••••••"
         />

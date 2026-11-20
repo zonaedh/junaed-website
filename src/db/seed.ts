@@ -1,8 +1,29 @@
+/**
+ * Load .env.local for CLI runs.
+ *
+ * tsx does not read .env files, and `npm run db:seed` runs outside Next, so
+ * without this the script sees no DATABASE_URL and no seed credentials. Node
+ * 20.6+ provides loadEnvFile; a missing file is not an error (CI supplies real
+ * environment variables instead).
+ */
+try {
+  process.loadEnvFile(".env.local");
+} catch {
+  // No .env.local — rely on the real environment.
+}
+
 import { eq } from "drizzle-orm";
 import { closeDb, db } from "@/db";
-import { categories, services as servicesTable, settings, users } from "@/db/schema";
+import {
+  categories,
+  pages as pagesTable,
+  services as servicesTable,
+  settings,
+  users,
+} from "@/db/schema";
 import { hashPassword, validatePasswordStrength } from "@/lib/auth/password";
 import { services as seedServices } from "@/lib/content";
+import { PAGE_DEFINITIONS, defaultPageContent } from "@/lib/pages";
 
 /**
  * Seed script — run once against a fresh database.
@@ -122,6 +143,29 @@ async function main() {
       .onConflictDoNothing({ target: servicesTable.slug });
   }
   console.log(`Services ensured (${seedServices.length}).`);
+
+  /* ------------------------------- pages -------------------------------- */
+
+  /*
+   * Page content (MVP.md §3.3). Seeded as `published` with the exact copy that
+   * was hardcoded in Phase 1, so the storefront renders identically the moment
+   * the database is live — and every field is then editable in admin.
+   *
+   * onConflictDoNothing: re-running the seed must never overwrite an editor's
+   * work. A page that already has a row is left exactly as it is.
+   */
+  for (const definition of PAGE_DEFINITIONS) {
+    await db
+      .insert(pagesTable)
+      .values({
+        key: definition.key,
+        title: definition.name,
+        content: defaultPageContent(definition.key),
+        status: "published",
+      })
+      .onConflictDoNothing({ target: pagesTable.key });
+  }
+  console.log(`Pages ensured (${PAGE_DEFINITIONS.length}).`);
 
   console.log("Seed complete.");
   await closeDb();

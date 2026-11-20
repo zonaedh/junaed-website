@@ -1,8 +1,11 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
+import Image from "next/image";
 import { ArrowUpRight, ButtonLink } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Reveal } from "@/components/ui/reveal";
 import { SectionHead } from "@/components/ui/section-head";
+import { getPageContent } from "@/lib/pages";
+import { resolveMediaAsset } from "@/lib/media/repository";
 
 export const metadata: Metadata = {
   title: "About",
@@ -37,37 +40,24 @@ const capabilities = [
   { label: "WordPress", detail: "Custom themes, performance, editor-friendly builds" },
 ];
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const content = await getPageContent("about");
+  const aboutImage = await resolveMediaAsset(Number(content.image) || null);
+
   return (
     <>
       <section className="pt-10 pb-12 lg:pt-16 lg:pb-16">
         <div className="wrap grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
           <Reveal>
-            <Eyebrow>A little about me</Eyebrow>
+            <Eyebrow>{content.eyebrow}</Eyebrow>
             <h1 className="mt-5 mb-5 text-[clamp(2.25rem,5vw,3.75rem)] leading-[1.07] tracking-[-0.05em]">
-              Hey, I&rsquo;m Junaed. I make digital work{" "}
-              <span className="text-violet-600">work harder.</span>
+              {content.heading}{" "}
+              <span className="text-violet-600">{content.highlight}</span>
             </h1>
             <div className="space-y-4 text-[17px] leading-[1.8] text-[#3c3948]">
-              <p>
-                I&rsquo;m a digital marketer and creative problem-solver who
-                enjoys helping brands make sense of the online world. My work
-                brings together strategy, creativity, and practical execution, so
-                businesses can build a presence they&rsquo;re proud of and grow
-                with confidence.
-              </p>
-              <p>
-                I have spent most of my working life at the point where marketing
-                meets design and engineering: campaigns that need a landing page,
-                sites that need to rank, brands that need to look like they mean
-                it. That overlap is where most projects quietly succeed or fail,
-                and it is where I am most useful.
-              </p>
-              <p>
-                I work with a small number of clients at a time, on purpose. It
-                means I can be honest about scope, direct about what will not
-                work, and still be around when the thing launches.
-              </p>
+              <p>{content.story1}</p>
+              <p>{content.story2}</p>
+              <p>{content.story3}</p>
             </div>
             <div className="mt-7 flex flex-wrap gap-3">
               <ButtonLink href="/contact">
@@ -80,25 +70,37 @@ export default function AboutPage() {
           </Reveal>
 
           <Reveal delay={80}>
-            <div className="relative overflow-hidden rounded-[30px] bg-linear-145 from-violet-700 to-violet-950 p-8 text-white lg:p-10">
-              <div
-                aria-hidden="true"
-                className="absolute -top-16 -right-16 size-56 rounded-full bg-violet-400/20"
-              />
-              <div
-                aria-hidden="true"
-                className="font-display text-[80px] leading-none font-extrabold text-white/15"
-              >
-                JH.
+            {aboutImage ? (
+              <div className="relative overflow-hidden rounded-[30px] bg-surface">
+                <Image
+                  src={aboutImage.url}
+                  alt={aboutImage.alt}
+                  width={800}
+                  height={1000}
+                  sizes="(max-width: 1024px) 100vw, 40vw"
+                  className="h-full w-full object-cover"
+                />
               </div>
-              <p className="relative mt-6 font-display text-[22px] leading-[1.35] font-bold lg:text-[25px]">
-                &ldquo;Creative thinking. Clear strategy. Work that makes a
-                difference.&rdquo;
-              </p>
-              <p className="relative mt-4 text-sm leading-[1.7] text-violet-200">
-                The three things I check before calling any project finished.
-              </p>
-            </div>
+            ) : (
+              <div className="relative overflow-hidden rounded-[30px] bg-linear-145 from-violet-700 to-violet-950 p-8 text-white lg:p-10">
+                <div
+                  aria-hidden="true"
+                  className="absolute -top-16 -right-16 size-56 rounded-full bg-violet-400/20"
+                />
+                <div
+                  aria-hidden="true"
+                  className="font-display text-[80px] leading-none font-extrabold text-white/15"
+                >
+                  JH.
+                </div>
+                <p className="relative mt-6 font-display text-[22px] leading-[1.35] font-bold lg:text-[25px]">
+                  &ldquo;{content.quote}&rdquo;
+                </p>
+                <p className="relative mt-4 text-sm leading-[1.7] text-violet-200">
+                  {content.quoteNote}
+                </p>
+              </div>
+            )}
           </Reveal>
         </div>
       </section>

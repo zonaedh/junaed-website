@@ -1,13 +1,18 @@
-import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import * as schema from "./schema";
 
 /**
  * Database client — lazily initialised.
  *
- * SERVER ONLY. Never import this from a file with "use client": the `postgres`
+ * SERVER ONLY. Never import this from a file with "use client": the `pg`
  * package cannot be bundled for the browser, and Next turns that into a build
  * error (which is the behaviour we want).
+ *
+ * Why `pg` and not `postgres` (D-022): both work against Neon in production,
+ * but only `pg` sends enum parameters correctly through the local development
+ * database. Using one driver everywhere means local and production run the
+ * same code path, so a bug cannot hide in the difference.
  *
  * Why lazy: `next build` imports every route module to collect page data. If
  * the pool were created at import time, a build would demand a live database
@@ -16,14 +21,13 @@ import * as schema from "./schema";
  * instead, which is also when a missing DATABASE_URL should fail.
  *
  * Neon + Vercel is serverless: each function instance gets its own pool, so
- * `max` is kept small. `prepare: false` is required when talking to Neon's
- * transaction pooler.
+ * `max` is kept small.
  */
 
-type Database = PostgresJsDatabase<typeof schema>;
+type Database = NodePgDatabase<typeof schema>;
 
 const globalForDb = globalThis as unknown as {
-  __jhSql?: ReturnType<typeof postgres>;
+  __jhPool?: Pool;
   __jhDb?: Database;
 };
 
@@ -38,27 +42,30 @@ function connectionString(): string {
 }
 
 function createDb(): Database {
-  const sql =
-    globalForDb.__jhSql ??
-    postgres(connectionString(), {
+  const pool =
+    globalForDb.__jhPool ??
+    new Pool({
+      connectionString: connectionString(),
       max: 5,
-      idle_timeout: 20,
-      connect_timeout: 10,
-      prepare: false,
+      idleTimeoutMillis: 20_000,
+      connectionTimeoutMillis: 10_000,
+      // Neon's pooler terminates TLS at the edge; a managed database should
+      // never be reached without it.
+      ssl:
+        process.env.DATABASE_URL?.includes("localhost") ||
+        process.env.DATABASE_URL?.includes("127.0.0.1")
+          ? undefined
+          : { rejectUnauthorized: false },
     });
 
   // Reuse the pool across hot reloads in development.
   if (process.env.NODE_ENV !== "production") {
-    globalForDb.__jhSql = sql;
+    globalForDb.__jhPool = pool;
   }
 
-  return drizzle(sql, { schema });
+  return drizzle(pool, { schema });
 }
 
-/**
- * A Proxy that builds the real client on first property access, so importing
- * this module has no side effects and no connection requirement.
- */
 function instance(): Database {
   const existing = globalForDb.__jhDb;
   if (existing) return existing;
@@ -79,8 +86,8 @@ export const db: Database = new Proxy({} as Database, {
 
 /** Close the pool. Only scripts (seed, migrations) need this. */
 export async function closeDb(): Promise<void> {
-  await globalForDb.__jhSql?.end();
-  globalForDb.__jhSql = undefined;
+  await globalForDb.__jhPool?.end();
+  globalForDb.__jhPool = undefined;
   globalForDb.__jhDb = undefined;
 }
 

@@ -1,7 +1,15 @@
 import Link from "next/link";
-import { footerNav, legalNav, site } from "@/lib/site";
+import { footerNav, legalNav } from "@/lib/site";
 
-export function Footer() {
+export function Footer({
+  siteName,
+  shortName,
+  footerText,
+}: {
+  siteName: string;
+  shortName: string;
+  footerText: string;
+}) {
   // Rendered on the server on purpose: no JS needed for the copyright year.
   const year = new Date().getFullYear();
 
@@ -16,13 +24,13 @@ export function Footer() {
             aria-hidden="true"
             className="grid size-[38px] place-items-center rounded-[13px] bg-linear-145 from-violet-500 to-violet-950 text-[17px] font-extrabold text-white"
           >
-            {site.shortName.charAt(0)}
+            {shortName.charAt(0)}
           </span>
-          <span>{site.name}</span>
+          <span>{siteName}</span>
         </Link>
 
         <p className="order-last md:order-none">
-          © {year} {site.name}. Crafted with care.
+          © {year} {siteName}. {footerText}
         </p>
 
         <nav aria-label="Footer navigation">

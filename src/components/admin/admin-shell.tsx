@@ -81,6 +81,18 @@ export function AdminShell({
   const [collapsed, setCollapsed] = useState(false);
   const drawerId = useId();
 
+  /**
+   * The nav hrefs are written for the admin host, where the proxy rewrites
+   * `/settings` into the admin tree. On loopback there is no rewrite, so the
+   * panel lives under `/admin/...` and every link would 404 (D-024).
+   *
+   * Detecting it from the pathname is reliable here: the only way to reach an
+   * admin route on loopback is through the `/admin` prefix, and on the admin
+   * host the pathname never carries it.
+   */
+  const basePath = pathname.startsWith("/admin") ? "/admin" : "";
+  const toAdminHref = (href: string) => `${basePath}${href}`;
+
   useEffect(() => {
     if (!mobileOpen) return;
     function onKeyDown(event: KeyboardEvent) {
@@ -128,7 +140,7 @@ export function AdminShell({
                   return (
                     <li key={item.href}>
                       <Link
-                        href={item.href}
+                        href={toAdminHref(item.href)}
                         aria-current={active ? "page" : undefined}
                         onClick={() => setMobileOpen(false)}
                         title={collapsed ? item.label : undefined}
@@ -219,7 +231,7 @@ export function AdminShell({
 
           {!user.totpEnabled ? (
             <Link
-              href="/account/2fa"
+              href={toAdminHref("/account/2fa")}
               className="hidden rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 sm:block"
             >
               Set up 2FA

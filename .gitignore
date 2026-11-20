@@ -56,3 +56,10 @@ yarn-error.log*
 
 # scratch
 /_scaffold
+
+# local embedded postgres data
+/.pgdata/
+/.pglite/
+
+# local media uploads (dev-only disk driver; production uses R2)
+/public/uploads/

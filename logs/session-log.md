@@ -60,3 +60,10 @@ Format: `YYYY-MM-DD HH:MM | agent | phase | START/CHECKPOINT/END | one-line summ
 ### Next
 Phase 3, but only after a `DATABASE_URL` exists. Proving login + 2FA end to end is
 the first thing to do when the database arrives.
+
+2026-11-20 23:58 | monitor | phase-02 | CHECKPOINT | MONITOR: Phase 2 verified. Build passes (41 routes), 47 tests pass. Uncommitted local PGlite & drizzle changes in working tree. No secrets found. | a8d222d
+2026-11-21 00:20 | monitor | phase-03 | CHECKPOINT | MONITOR: Phase 3 in progress (settings + pages editors built & wired to DB, verified with local PGlite). Build passes (41 routes). Uncommitted files in working tree. R2 credentials needed for media. | a8d222d
+
+
+
+2026-11-21 00:45 | saffron | phase-03/04 | END | Phases 3 and 4 complete. Media library on a storage adapter (local disk now, R2 dormant, D-027), image pipeline with content-sniff + EXIF strip + WebP + thumbnail (D-028), delete guard on in-use media (D-029). Blog (Tiptap, slug, word count, tags, categories) and Portfolio (CRUD, featured, results) verified end to end in a browser. Bugs fixed: SSG on /blog/[slug] (B13, D-030), unstable_cache Date-as-string type lie (B14, D-031), hero alt from heading (B12), settings form key-map duplication (B15), usage N+1 (B16). lint/typecheck/93 tests/build all pass (37 routes); build also passes with DATABASE_URL unset. Test data and orphan uploads removed. DECISIONS D-027..D-031 written; HANDOFF, PROJECT_UPDATE, phase-03-log, phase-04-log updated. NOTHING COMMITTED since a8d222d. | a8d222d

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession, type SessionUser } from "@/lib/auth/session";
+import { getAdminBase } from "@/lib/admin-path";
 import {
   hasRole,
   isTwoFactorMandatory,
@@ -15,6 +16,10 @@ import {
  *
  * The hierarchy and labels live in role-hierarchy.ts (pure, testable). This
  * file adds the request-time guards.
+ *
+ * Redirects are host-aware (D-023, D-024): on the admin host the clean path
+ * works because the proxy rewrites it; on loopback the panel lives under
+ * `/admin`, and a bare `/login` would 404.
  */
 
 export { hasRole, isTwoFactorMandatory, ROLE_LABELS };
@@ -33,13 +38,14 @@ export class UnauthorizedError extends Error {
  */
 export async function requireRole(required: RoleName): Promise<SessionUser> {
   const session = await getSession();
+  const base = await getAdminBase();
 
   if (!session) {
-    redirect("/login");
+    redirect(`${base}/login`);
   }
 
   if (!hasRole(session.user.role, required)) {
-    redirect("/dashboard?error=forbidden");
+    redirect(`${base}/dashboard?error=forbidden`);
   }
 
   return session.user;

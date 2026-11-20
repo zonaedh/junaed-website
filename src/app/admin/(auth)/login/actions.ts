@@ -234,7 +234,24 @@ export async function login(
     ipHash: meta.ipHash,
   });
 
-  redirect("/dashboard");
+  /**
+   * Where to land after login.
+   *
+   * On the admin host the proxy rewrites `/dashboard` into the admin tree, so
+   * the clean URL is correct. On loopback there is no admin subdomain and no
+   * rewrite, so `/dashboard` is a 404 — the panel lives at `/admin/dashboard`.
+   * Detect the host the same way the proxy does and pick the right prefix.
+   */
+  const host = (await headers()).get("host") ?? "";
+  const hostname = host.split(":")[0]?.toLowerCase() ?? "";
+  const isAdminHost = hostname.startsWith("admin.");
+  const isLoopback =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]" ||
+    hostname === "::1";
+
+  redirect(isAdminHost || !isLoopback ? "/dashboard" : "/admin/dashboard");
 }
 
 /** Logout: revoke this session and clear the cookie. */
@@ -255,5 +272,16 @@ export async function logout(): Promise<void> {
   }
 
   await clearSessionCookie();
-  redirect("/login");
+
+  // Same loopback caveat as login: /login only resolves on the admin host.
+  const host = (await headers()).get("host") ?? "";
+  const hostname = host.split(":")[0]?.toLowerCase() ?? "";
+  const isAdminHost = hostname.startsWith("admin.");
+  const isLoopback =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]" ||
+    hostname === "::1";
+
+  redirect(isAdminHost || !isLoopback ? "/login" : "/admin/login");
 }

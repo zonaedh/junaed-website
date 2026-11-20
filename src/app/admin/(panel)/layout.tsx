@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { getAdminBase } from "@/lib/admin-path";
 import { AdminShell } from "@/components/admin/admin-shell";
 
 export const metadata: Metadata = {
@@ -20,7 +21,7 @@ export default async function AdminAreaLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) redirect(`${await getAdminBase()}/login`);
 
   return (
     <AdminShell user={session.user}>{children}</AdminShell>

@@ -1,16 +1,16 @@
 # PROJECT_UPDATE.md
 Human-readable status of **junaedhossain.com + admin panel**. Update at every phase end and major event.
 
-**Last updated:** 2026-11-20 · **Overall progress:** 2.5 / 10 phases
+**Last updated:** 2026-11-21 · **Overall progress:** 4.6 / 10 phases
 
 ## Phase Status
 | # | Phase | Status | Started | Completed | Log |
 |---|---|---|---|---|---|
 | 0 | Foundations | 🟨 Partly done (local only; hosting/DNS blocked on owner) | 2026-11-20 | — | [phase-00](logs/phase-00-log.md) |
 | 1 | Setup + Public Site Port | ✅ Complete (except Lighthouse) | 2026-11-20 | 2026-11-20 | [phase-01](logs/phase-01-log.md) |
-| 2 | DB, Auth & Admin Shell | ✅ Complete (code; DB migrations pending a live DATABASE_URL) | 2026-11-20 | 2026-11-20 | [phase-02](logs/phase-02-log.md) |
-| 3 | CMS Core (Pages, Settings, Media) | ⬜ | | | |
-| 4 | Blog & Portfolio | ⬜ | | | |
+| 2 | DB, Auth & Admin Shell | ✅ Complete (verified end-to-end with local PGlite) | 2026-11-20 | 2026-11-20 | [phase-02](logs/phase-02-log.md) |
+| 3 | CMS Core (Pages, Settings, Media) | ✅ Complete (media on local disk; R2 is an env swap) | 2026-11-21 | 2026-11-21 | [phase-03](logs/phase-03-log.md) |
+| 4 | Blog & Portfolio | ✅ Complete (verified end-to-end) | 2026-11-21 | 2026-11-21 | [phase-04](logs/phase-04-log.md) |
 | 5 | Contact, Leads, Notifications | ⬜ | | | |
 | 6 | On-Page SEO | ⬜ | | | |
 | 7 | Analytics, Tracking, Dashboard | ⬜ | | | |
@@ -25,6 +25,19 @@ Legend: ⬜ not started · 🟨 in progress · ✅ complete · ⛔ blocked
 - Repo: not created · Vercel project: not created
 
 ## Changelog (newest first)
+- 2026-11-21 — **Phase 4 complete.** Blog (Tiptap editor, slug derivation, word count,
+  reading time, tags, categories, draft/publish) and Portfolio (admin CRUD, featured flag,
+  results, year) both verified end to end in a browser. Public blog, portfolio and the home
+  page's Selected work now read from the database. Three real bugs fixed: SSG on
+  `/blog/[slug]` (a published post would have 404'd until deploy), `unstable_cache` returning
+  Dates as strings while typed as `Date`, and hero alt text sourced from the heading instead
+  of the media row. lint/typecheck/93 tests/build all pass (37 routes).
+- 2026-11-21 — **Phase 3 complete.** Media library built on a storage adapter (D-027): local
+  disk driver now, R2 driver written and dormant, so R2 is a five-variable swap rather than a
+  rewrite. Uploads are content-sniffed, EXIF-stripped and re-encoded to WebP with a 480px
+  thumbnail (D-028). Deleting an in-use image is refused with a usage list (D-029). Hero and
+  about images wired through the registry. Verified with real bytes and in the browser.
+- 2026-11-21 — **Phase 3 in progress.** Settings editor (`/settings`) and Pages editor (`/pages`) built and wired to DB. Storefront (header, footer, home, about, contact) now reads from DB. Verified end-to-end via local PGlite. Build passes (41 routes).
 - 2026-11-20 — **Phase 2 complete.** 19-table Drizzle schema, Argon2id passwords,
   hashed-token sessions, TOTP 2FA with encrypted secrets and recovery codes, login
   lockout, RBAC, audit logging, AES-256-GCM encryption, salted IP hashing. Admin panel:
@@ -42,9 +55,11 @@ Legend: ⬜ not started · 🟨 in progress · ✅ complete · ⛔ blocked
 ## Current Blockers
 - **Needs the owner:** GitHub repo, Vercel, Neon, Cloudflare R2, Upstash, Resend,
   Telegram bot, Namecheap DNS, 2FA. Exact steps in `HANDOFF.md → Needs From User`.
-  **Phase 2 is now blocked on Neon:** migrations, seed, login and 2FA cannot be
-  proven end to end until `DATABASE_URL` exists. That is the highest-value item.
+  **Neon is still needed for any deploy**, but local development is unblocked via PGlite
+  (D-022), so Phases 3 and 4 were completed and verified without it.
 - **Contact form does not deliver** (validation only until Phase 5). Launch blocker.
+- **R2 not configured.** Media works locally on disk; a production deploy with no R2 throws
+  at boot by design (D-027). Blocks deploying media, not developing it.
 - Lighthouse not measured (needs a deployed URL).
 
 ## Open Questions to User

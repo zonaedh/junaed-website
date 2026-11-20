@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { LoginForm } from "./login-form";
@@ -8,10 +9,23 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/** Same host logic as the login action: loopback has no admin subdomain. */
+async function dashboardPath(): Promise<string> {
+  const host = (await headers()).get("host") ?? "";
+  const hostname = host.split(":")[0]?.toLowerCase() ?? "";
+  const isAdminHost = hostname.startsWith("admin.");
+  const isLoopback =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]" ||
+    hostname === "::1";
+  return isAdminHost || !isLoopback ? "/dashboard" : "/admin/dashboard";
+}
+
 export default async function LoginPage() {
   // Already signed in? Go straight to the dashboard.
   const session = await getSession();
-  if (session) redirect("/dashboard");
+  if (session) redirect(await dashboardPath());
 
   return (
     <main className="grid min-h-dvh place-items-center px-5 py-10">

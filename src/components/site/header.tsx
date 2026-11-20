@@ -1,12 +1,18 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
-import { mainNav, site } from "@/lib/site";
+import { mainNav } from "@/lib/site";
 import { ArrowUpRight } from "@/components/ui/button";
 
-export function Header() {
+export function Header({
+  siteName,
+  shortName,
+}: {
+  siteName: string;
+  shortName: string;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -68,15 +74,15 @@ export function Header() {
           href="/"
           onClick={close}
           className="flex items-center gap-[11px] font-display text-[17px] font-extrabold tracking-[-0.04em]"
-          aria-label={`${site.name} — home`}
+          aria-label={`${siteName} — home`}
         >
           <span
             aria-hidden="true"
             className="grid size-[38px] place-items-center rounded-[13px] bg-linear-145 from-violet-500 to-violet-950 text-[17px] font-extrabold text-white shadow-[0_6px_18px_rgb(127_93_245/0.24)]"
           >
-            {site.shortName.charAt(0)}
+            {shortName.charAt(0)}
           </span>
-          <span>{site.name}</span>
+          <span>{siteName}</span>
         </Link>
 
         <nav aria-label="Main navigation" className="hidden lg:block">
@@ -113,7 +119,7 @@ export function Header() {
           aria-label={open ? "Close navigation" : "Open navigation"}
           className="grid size-11 place-items-center rounded-xl text-2xl text-ink transition-colors hover:bg-violet-50 lg:hidden"
         >
-          <span aria-hidden="true">{open ? "✕" : "☰"}</span>
+          <span aria-hidden="true">{open ? "âœ•" : "â˜°"}</span>
         </button>
       </div>
 
