@@ -7,6 +7,21 @@ The master plan is **`MVP.md`**. This file explains *how you must work*.
 Another agent may continue after you at any moment (usage limits, crashes, handoffs).
 **Assume your session can end at any time. Leave the project in a state where a stranger can continue.**
 
+## Repository — push every phase, no exceptions
+
+**Remote:** `https://github.com/zonaedh/junaed-website.git` · remote `origin` · branch `main`
+
+Every phase ends with a push. Every checkpoint ends with a push. Work that exists only on the
+local disk does not count as done, because the next agent may not be on this machine.
+
+```powershell
+git push origin main
+git rev-list --left-right --count HEAD...origin/main   # must print: 0   0
+```
+
+If the push is rejected, **never force-push over history you did not create.** Fetch, merge,
+resolve the conflict, push. See §3 step 8 and §2.
+
 ---
 
 ## 1. Session Start Protocol (mandatory, in this order)
@@ -37,7 +52,12 @@ Do NOT wait until a phase ends. Update `HANDOFF.md` and commit:
 - immediately when you sense you are running low on context/usage
 
 A checkpoint = **(a)** update HANDOFF "Current State / Next Steps", **(b)** tick checkboxes in `MVP.md`,
-**(c)** append one line to `logs/session-log.md`, **(d)** `git commit` (even WIP: `wip(phase-3): media picker modal`).
+**(c)** append one line to `logs/session-log.md`, **(d)** `git commit` (even WIP: `wip(phase-3): media picker modal`),
+**(e)** `git push origin main`.
+
+**Remote:** `https://github.com/zonaedh/junaed-website.git` (remote name `origin`, branch `main`).
+Push at every checkpoint, not just at phase end. The point of a checkpoint is that the work survives
+losing this machine.
 
 ---
 
@@ -52,9 +72,12 @@ When all acceptance checks of a phase pass:
 5. Add any new decisions to `DECISIONS.md`.
 6. Tick all phase checkboxes in `MVP.md`.
 7. Commit: `chore(phase-XX): complete phase and update docs`, tag `phase-XX-complete`.
-8. Tell the user: what is done, how to test it, what they must do manually (keys, DNS, accounts), what's next.
+8. **Push to GitHub — not optional.** `git push origin main` (and `git push origin phase-XX-complete` for the tag).
+   A phase is not complete until the remote has it. Verify with `git rev-list --left-right --count HEAD...origin/main`
+   → must read `0  0`. If the push is rejected, do not force-push over someone else's work; fetch, merge, resolve, push.
+9. Tell the user: what is done, how to test it, what they must do manually (keys, DNS, accounts), what's next.
 
-Never start the next phase before steps 1–7 are done.
+Never start the next phase before steps 1–8 are done. **A phase that exists only on the local machine is not done.**
 
 ---
 
@@ -147,7 +170,8 @@ Drizzle ORM + Neon Postgres, Cloudflare R2, Upstash Redis, Resend + React Email,
 1. Finish or safely stash the current unit of work. Don't leave the build broken; if unavoidable, say so loudly in HANDOFF.
 2. Overwrite `HANDOFF.md` (template inside) with accurate state and **specific next steps** (file + function level).
 3. Append the final line to `logs/session-log.md`.
-4. Commit and push the branch.
+4. Commit and push the branch: `git push origin main`. Confirm with
+   `git rev-list --left-right --count HEAD...origin/main` → `0  0`.
 5. Tell the user the one-line summary and how to resume: *"Open the project and tell the new agent: read AGENT_GUIDE.md and continue from HANDOFF.md."*
 
 ---

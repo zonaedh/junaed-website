@@ -110,7 +110,10 @@ blog and portfolio blind would have produced the same gap twice.
 
 ## 7. Next Phase Starting Notes
 
-1. **Commit Phases 3 and 4.** Nothing has been committed since Phase 2 (`a8d222d`).
+1. Phases 3 and 4 are committed and pushed to `https://github.com/zonaedh/junaed-website.git`
+   (`f9f1916`, `8b404ea`, merge `57101ca`). Confirm `git rev-list --left-right --count
+   HEAD...origin/main` reads `0  0` before starting.
 2. Phase 5 (Contact, Leads, Notifications) is the launch blocker: the contact form currently
    validates and discards.
 3. Read D-030 and D-031 before adding any new cached query or detail route.
+4. **Push when the phase is done.** That is part of the phase, per `AGENT_GUIDE.md` §3.

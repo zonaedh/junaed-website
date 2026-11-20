@@ -2,14 +2,33 @@
 > Overwrite this file at every checkpoint. Keep it short, specific and true.
 > A new agent must be able to continue from this file alone (plus AGENT_GUIDE.md).
 
-**Last updated:** 2026-11-21 00:45 (UTC+6) · **By:** saffron
+**Last updated:** 2026-11-21 01:10 (UTC+6) · **By:** saffron
+
+## 0. Repository — push at every phase and every checkpoint
+
+**Remote:** `https://github.com/zonaedh/junaed-website.git` · remote `origin` · branch `main`
+
+A phase is **not complete** until it is pushed. Neither is a checkpoint. Work that exists only
+on the local machine does not count, because the next agent may not be on this machine.
+
+```powershell
+git push origin main
+git rev-list --left-right --count HEAD...origin/main   # must print: 0   0
+```
+
+If the push is rejected, **never force-push** over history you did not create. Fetch, merge,
+resolve, push. Full protocol: `AGENT_GUIDE.md` §3.
+
+**Current sync state:** `main` is at `57101ca`, identical to `origin/main` (0 ahead, 0 behind).
+Phases 0–4 are pushed. Phase 5 has not started.
+
 
 ## 1. Where We Are
 - **Current phase:** Phase 3 complete, Phase 4 complete. Both verified in a browser.
 - **Phase progress:** Phase 0 local done (hosted half blocked on owner), Phase 1 complete,
   Phase 2 complete + verified, Phase 3 complete, Phase 4 complete.
-- **Branch:** `main` — **nothing committed since Phase 2 (`a8d222d`).** All of Phase 3 and 4
-  is uncommitted in the working tree. Commit before starting anything new.
+- **Branch:** `main` — Phases 3 and 4 are committed and **pushed** (`f9f1916`, `8b404ea`,
+  merge `57101ca`). Remote and local are identical.
 - **Build status:** passing — lint, typecheck, **93 tests**, production build (37 routes).
   Build also passes with `DATABASE_URL` unset.
 
@@ -43,13 +62,15 @@
 - **B16 — usage tracking ran an N+1 query per portfolio row.** Now one query.
 
 ## 4. Next Steps (do in this order)
-1. **Commit Phase 3 + 4.** It is all uncommitted. Suggested: one commit per phase, not one
-   for both — the media library and the blog are independently reviewable.
+1. **Confirm the remote is in sync** before touching anything: `git status` and
+   `git rev-list --left-right --count HEAD...origin/main` → `0  0`.
 2. Read `DECISIONS.md` D-022 to D-031.
 3. **Phase 5 — Contact, Leads, Notifications.** The contact form currently validates and
    discards. This is the launch blocker.
 4. **Phase 3/4 remainder, when credentials arrive:** R2 (swap env vars, no code change),
    live preview with a signed token, "last edited by".
+5. **When Phase 5 passes its gates: commit, tag `phase-05-complete`, and push.** That is part
+   of finishing the phase, not an afterthought.
 
 ## 5. Needs From User (blocking items)
 
