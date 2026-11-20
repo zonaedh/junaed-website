@@ -1,0 +1,233 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Design tokens — ported 1:1 from junaed_hossain.html
+   Violet scale, ink/muted/line, 24px radius, 1160px container.
+   ========================================================================== */
+
+@theme {
+  --color-violet-50: #f4f3ff;
+  --color-violet-100: #ebe9fe;
+  --color-violet-200: #dad6fe;
+  --color-violet-300: #bfb6fc;
+  --color-violet-400: #9e8cf9;
+  --color-violet-500: #7f5df5;
+  --color-violet-600: #6d3bec;
+  --color-violet-700: #5f29d8;
+  --color-violet-800: #4f22b5;
+  --color-violet-900: #4921a3;
+  --color-violet-950: #271164;
+
+  --color-ink: #171523;
+  --color-muted: #747181;
+  --color-line: #eae8f2;
+  --color-surface: #f8f7fc;
+
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-manrope), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --radius-card: 22px;
+  --radius-panel: 24px;
+  --radius-hero: 32px;
+
+  --shadow-soft: 0 18px 55px rgb(39 17 100 / 0.09);
+  --shadow-float: 0 15px 40px rgb(39 17 100 / 0.09);
+
+  --container-site: 1160px;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: #fff;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.045em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* Visible, consistent focus ring everywhere — keyboard users only. */
+  :focus-visible {
+    outline: 2px solid var(--color-violet-600);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-violet-200);
+    color: var(--color-violet-950);
+  }
+}
+
+/* ==========================================================================
+   Utilities
+   ========================================================================== */
+
+@utility wrap {
+  width: min(var(--container-site), calc(100% - 44px));
+  margin-inline: auto;
+
+  @media (width <= 640px) {
+    width: min(var(--container-site), calc(100% - 34px));
+  }
+}
+
+/* Reveal-on-scroll. The .is-visible class is added by <Reveal>.
+   Content is visible by default so it never disappears without JS. */
+@utility reveal {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .js-reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition:
+      opacity 0.65s var(--ease-out-soft),
+      transform 0.65s var(--ease-out-soft);
+  }
+
+  .js-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   Rich text (blog posts, case studies, legal pages)
+   ========================================================================== */
+
+.prose-site {
+  font-size: 17px;
+  line-height: 1.8;
+  color: #3c3948;
+}
+
+.prose-site > * + * {
+  margin-top: 1.25em;
+}
+
+.prose-site h2 {
+  font-size: 1.75rem;
+  line-height: 1.25;
+  margin-top: 2.2em;
+  color: var(--color-ink);
+}
+
+.prose-site h3 {
+  font-size: 1.35rem;
+  line-height: 1.3;
+  margin-top: 1.9em;
+  color: var(--color-ink);
+}
+
+.prose-site h4 {
+  font-size: 1.1rem;
+  margin-top: 1.6em;
+  color: var(--color-ink);
+}
+
+.prose-site a {
+  color: var(--color-violet-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.prose-site a:hover {
+  color: var(--color-violet-900);
+}
+
+.prose-site strong {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.prose-site ul,
+.prose-site ol {
+  padding-left: 1.4em;
+}
+
+.prose-site ul {
+  list-style: disc;
+}
+
+.prose-site ol {
+  list-style: decimal;
+}
+
+.prose-site li + li {
+  margin-top: 0.5em;
+}
+
+.prose-site blockquote {
+  border-left: 3px solid var(--color-violet-300);
+  padding-left: 1.25em;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.prose-site code {
+  background: var(--color-violet-50);
+  color: var(--color-violet-800);
+  padding: 0.15em 0.4em;
+  border-radius: 6px;
+  font-size: 0.9em;
+}
+
+.prose-site pre {
+  background: var(--color-violet-950);
+  color: #ede9fe;
+  padding: 1.25em;
+  border-radius: 14px;
+  overflow-x: auto;
+  font-size: 0.9em;
+}
+
+.prose-site pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+.prose-site img {
+  border-radius: 16px;
+}
+
+.prose-site hr {
+  border: 0;
+  border-top: 1px solid var(--color-line);
+  margin: 2.5em 0;
+}
