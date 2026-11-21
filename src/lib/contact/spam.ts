@@ -79,7 +79,7 @@ export const DEFAULT_BANNED_KEYWORDS: readonly string[] = [
   "risk free",
 ];
 
-/** Links beyond this count start scoring. */
+/** Links beyond this count start scoring. Overridable from settings. */
 const LINK_FREE_ALLOWANCE = 1;
 
 export type SpamInput = {
@@ -90,6 +90,16 @@ export type SpamInput = {
   bannedKeywords?: readonly string[];
   /** True when this exact message hash already exists in the leads table. */
   repeatedMessage?: boolean;
+  /**
+   * Links allowed before scoring starts. From Settings → Security; falls back
+   * to one, which is normal for a signature.
+   */
+  maxLinks?: number;
+  /**
+   * When true, a disposable domain blocks outright instead of adding weight.
+   * From Settings → Security.
+   */
+  blockDisposableEmail?: boolean;
 };
 
 /** Count URLs and bare domains in a block of text. */
@@ -144,9 +154,10 @@ export function scoreSubmission(input: SpamInput): SpamVerdict {
   const lower = message.toLowerCase();
 
   // --- links ---
+  const allowance = Math.max(0, input.maxLinks ?? LINK_FREE_ALLOWANCE);
   const links = countLinks(message);
-  if (links > LINK_FREE_ALLOWANCE) {
-    const excess = links - LINK_FREE_ALLOWANCE;
+  if (links > allowance) {
+    const excess = links - allowance;
     signals.push({
       code: "links",
       weight: Math.min(excess * 2, 6),
@@ -172,7 +183,8 @@ export function scoreSubmission(input: SpamInput): SpamVerdict {
   if (isDisposableEmail(input.email)) {
     signals.push({
       code: "disposable_email",
-      weight: 4,
+      // A hard block when the owner asked for one, otherwise a strong signal.
+      weight: input.blockDisposableEmail ? SPAM_BLOCK_THRESHOLD : 4,
       detail: "disposable email domain",
     });
   }

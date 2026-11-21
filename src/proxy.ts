@@ -1,4 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { clientAddressFromHeaders, isAddressBlocked } from "@/lib/security/ip";
+import { getActiveBlockEntries } from "@/lib/security/blocks";
+import { hit } from "@/lib/security/proxy-limiter";
+import { retryAfterSeconds, ruleForPath } from "@/lib/security/rate-limit-rules";
 
 /**
  * Host-based routing + admin hardening.
@@ -47,7 +51,68 @@ function isLoopbackHost(host: string | null): boolean {
 /** Paths that must stay reachable on the admin host without rewriting. */
 const ADMIN_PASSTHROUGH = ["/_next", "/favicon.ico", "/robots.txt", "/api"];
 
-export function proxy(request: NextRequest) {
+/**
+ * Block list + rate limit (MVP.md §8.1, §8.2).
+ *
+ * Both run before any routing decision, so a blocked client gets 403 on every
+ * path — public and admin alike — and a flooding client gets 429 with a
+ * Retry-After.
+ *
+ * The block list is read through a one-minute in-process cache (see
+ * lib/security/blocks). The docs are explicit that the proxy is not the place
+ * for slow data fetching, and a database round trip on every request would be
+ * exactly that. The cost is up to a minute of staleness on a newly added block.
+ *
+ * The limiter is in-process and therefore per-instance; it is a cheap first
+ * gate, not a distributed one (D-040).
+ */
+async function guardRequest(request: NextRequest): Promise<NextResponse | null> {
+  const address = clientAddressFromHeaders(request.headers);
+
+  // No address means no proxy in front (local dev). Nothing to key on, so the
+  // guards are skipped rather than shared across every visitor under one key.
+  if (!address) return null;
+
+  try {
+    const entries = await getActiveBlockEntries();
+    if (entries.length > 0 && isAddressBlocked(address, entries)) {
+      return new NextResponse("Forbidden", {
+        status: 403,
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "no-store",
+          "x-robots-tag": "noindex, nofollow",
+        },
+      });
+    }
+  } catch (error) {
+    // A failure here must not take the site down; the limiter still runs.
+    console.error("[proxy] block list check failed", error);
+  }
+
+  const rule = ruleForPath(request.nextUrl.pathname);
+  if (rule) {
+    const outcome = hit(`${rule.name}:${address}`, rule.limit, rule.windowMs);
+    if (!outcome.allowed) {
+      return new NextResponse("Too many requests. Please slow down.", {
+        status: 429,
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "retry-after": String(retryAfterSeconds(outcome.resetAt)),
+          "cache-control": "no-store",
+          "x-robots-tag": "noindex, nofollow",
+        },
+      });
+    }
+  }
+
+  return null;
+}
+
+export async function proxy(request: NextRequest) {
+  const guarded = await guardRequest(request);
+  if (guarded) return guarded;
+
   const { pathname, search } = request.nextUrl;
   const host = request.headers.get("host");
   const adminHost = isAdminHost(host);

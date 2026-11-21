@@ -20,6 +20,10 @@ import {
 } from "@/lib/auth/session";
 import { isTwoFactorMandatory, verifyTotpCode } from "@/lib/auth/totp";
 import { hashIp } from "@/lib/security/hash";
+import { checkRateLimit } from "@/lib/contact/rate-limit";
+import { LOGIN_RULE } from "@/lib/security/rate-limit-rules";
+import { clientAddressFromHeaders, isAddressBlocked } from "@/lib/security/ip";
+import { getSettings } from "@/lib/settings";
 import { loginSchema, type LoginState } from "@/lib/validation/auth";
 
 /**
@@ -45,12 +49,38 @@ const DUMMY_HASH =
 
 async function requestMeta() {
   const headerList = await headers();
-  const forwarded = headerList.get("x-forwarded-for");
-  const ip = forwarded?.split(",")[0]?.trim() ?? headerList.get("x-real-ip");
+  const ip = clientAddressFromHeaders(headerList);
   return {
+    ip,
     ipHash: hashIp(ip),
     userAgent: headerList.get("user-agent"),
   };
+}
+
+/**
+ * Admin IP allowlist (MVP.md §8.2, optional).
+ *
+ * When the owner has set an allowlist, only those addresses may reach the login
+ * action. An empty setting means "allow everyone", which is the default: a
+ * misconfigured allowlist is a lockout, and the owner has to be able to get in.
+ *
+ * This is a second gate, not the only one — the account lockout and 2FA still
+ * apply to anyone who passes it.
+ */
+async function allowlistBlocks(ip: string | null): Promise<boolean> {
+  const settings = await getSettings().catch(() => null);
+  const raw = settings?.loginAllowlist ?? "";
+  const entries = raw
+    .split(/[\n,]/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (entries.length === 0) return false;
+  // No address means no proxy in front (local dev). Do not lock the developer
+  // out of their own machine over a header that only exists in production.
+  if (!ip) return false;
+
+  return !isAddressBlocked(ip, entries);
 }
 
 export async function login(
@@ -75,11 +105,42 @@ export async function login(
    * message, never a stack trace in the browser. A misconfigured deploy is a
    * server-side problem and the visitor is told nothing about it.
    */
-  let meta: { ipHash: string | null; userAgent: string | null };
+  let meta: { ip: string | null; ipHash: string | null; userAgent: string | null };
   let user: typeof users.$inferSelect | undefined;
 
   try {
     meta = await requestMeta();
+
+    // Allowlist check before anything else: an address that is not permitted
+    // should not learn whether the account exists, or burn a password attempt.
+    if (await allowlistBlocks(meta.ip)) {
+      await logActivity({
+        action: ACTIONS.loginFailed,
+        entity: "user",
+        meta: { reason: "ip_not_allowlisted" },
+        ipHash: meta.ipHash,
+      });
+      return { status: "error", message: GENERIC_ERROR };
+    }
+
+    // Per-IP limit. The account lockout stops one account being guessed; this
+    // stops one address spraying many accounts. Both are needed (D-040).
+    if (meta.ipHash) {
+      const limit = await checkRateLimit(meta.ipHash, LOGIN_RULE);
+      if (!limit.allowed) {
+        const minutes = Math.max(1, Math.ceil((limit.resetAt - Date.now()) / 60000));
+        await logActivity({
+          action: ACTIONS.loginLocked,
+          entity: "user",
+          meta: { reason: "ip_rate_limited", minutes },
+          ipHash: meta.ipHash,
+        });
+        return {
+          status: "error",
+          message: `Too many attempts from this connection. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`,
+        };
+      }
+    }
 
     // Opportunistic housekeeping; never blocks the login.
     void purgeExpiredSessions().catch(() => {});

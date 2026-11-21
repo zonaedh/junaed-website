@@ -8,6 +8,9 @@ import {
   parseUtm,
 } from "@/lib/analytics/core";
 import { hashIp } from "@/lib/security/hash";
+import { checkRateLimit } from "@/lib/contact/rate-limit";
+import { TRACK_RULE } from "@/lib/security/rate-limit-rules";
+import { clientAddressFromHeaders } from "@/lib/security/ip";
 import { getSeoDefaults } from "@/lib/seo/repository";
 
 /**
@@ -73,10 +76,16 @@ export async function POST(request: NextRequest) {
       request.headers.get("cf-ipcountry") ??
       null;
 
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      request.headers.get("x-real-ip") ??
-      null;
+    const ip = clientAddressFromHeaders(request.headers);
+    const ipHash = hashIp(ip);
+
+    // Per-endpoint limit (MVP.md §8.1). The proxy already applies a coarse
+    // per-address limit; this one is exact and shared across instances when
+    // Upstash is configured.
+    if (ipHash) {
+      const limit = await checkRateLimit(ipHash, TRACK_RULE);
+      if (!limit.allowed) return NO_CONTENT;
+    }
 
     await recordPageView({
       path,
@@ -87,7 +96,7 @@ export async function POST(request: NextRequest) {
       utmSource: utm.source,
       utmMedium: utm.medium,
       utmCampaign: utm.campaign,
-      visitorHash: hashIp(ip),
+      visitorHash: ipHash,
       sessionHash: null,
     });
   } catch (error) {

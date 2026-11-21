@@ -213,3 +213,54 @@ describe("scoreSubmission", () => {
     expect(DEFAULT_BANNED_KEYWORDS.length).toBeGreaterThan(5);
   });
 });
+
+describe("scoreSubmission — settings-driven knobs (MVP.md §8.2)", () => {
+  it("honours a raised link allowance", () => {
+    // Long enough that the separate "short message that is mostly links"
+    // signal does not fire, so this isolates the link allowance itself.
+    const message =
+      "Hello, I read your article on technical SEO last week and it was genuinely useful. " +
+      "I have two references you may find interesting: https://a.com and https://b.com. " +
+      "Would you be open to a short call about a project later this month?";
+    const strict = scoreSubmission({ name: "x", email: "x@example.com", message });
+    const relaxed = scoreSubmission({
+      name: "x",
+      email: "x@example.com",
+      message,
+      maxLinks: 3,
+    });
+    expect(strict.score).toBeGreaterThan(relaxed.score);
+    expect(relaxed.score).toBe(0);
+  });
+
+  it("honours a zero link allowance", () => {
+    const verdict = scoreSubmission({
+      name: "x",
+      email: "x@example.com",
+      message: "One link https://a.com here.",
+      maxLinks: 0,
+    });
+    expect(verdict.signals.some((signal) => signal.code === "links")).toBe(true);
+  });
+
+  it("blocks a disposable domain outright when asked", () => {
+    const verdict = scoreSubmission({
+      name: "x",
+      email: "x@mailinator.com",
+      message: "Hello, I would like to discuss a project with you.",
+      blockDisposableEmail: true,
+    });
+    expect(verdict.block).toBe(true);
+  });
+
+  it("only scores a disposable domain when not blocking outright", () => {
+    const verdict = scoreSubmission({
+      name: "x",
+      email: "x@mailinator.com",
+      message: "Hello, I would like to discuss a project with you.",
+      blockDisposableEmail: false,
+    });
+    expect(verdict.block).toBe(false);
+    expect(verdict.signals.some((signal) => signal.code === "disposable_email")).toBe(true);
+  });
+});

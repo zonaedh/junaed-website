@@ -83,4 +83,15 @@ export const ACTIONS = {
   scriptDeleted: "script.deleted",
   scriptRolledBack: "script.rolled_back",
   alertRead: "alert.read",
+  // Phase 8 — security
+  spamBlocked: "security.spam.blocked",
+  ipBlocked: "security.ip.blocked",
+  ipUnblocked: "security.ip.unblocked",
+  ipAutoBlocked: "security.ip.auto_blocked",
+  logsCleared: "security.logs.cleared",
+  staffInviteSent: "staff.invite.sent",
+  staffRoleChanged: "staff.role.changed",
+  staffActivated: "staff.activated",
+  staffPasswordResetForced: "staff.password_reset.forced",
+  staffSessionsRevoked: "staff.sessions.revoked",
 } as const;

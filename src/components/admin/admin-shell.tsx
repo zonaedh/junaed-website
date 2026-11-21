@@ -56,7 +56,7 @@ const NAV: NavGroup[] = [
     title: "System",
     items: [
       { href: "/settings", label: "Settings", icon: "⚙", role: "admin" },
-      { href: "/staff", label: "Staff", icon: "☰", role: "owner" },
+      { href: "/staff", label: "Staff", icon: "☰", role: "admin" },
       { href: "/security", label: "Security", icon: "⛨", role: "owner" },
       { href: "/backups", label: "Backups", icon: "⤓", role: "owner" },
     { href: "/scripts", label: "Scripts", icon: "‹›", role: "admin" },

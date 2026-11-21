@@ -19,9 +19,11 @@ import {
   sendTelegram,
 } from "@/lib/contact/notify";
 import { createLead, hasRecentMessageHash } from "@/lib/leads/repository";
+import { maybeAutoBlock } from "@/lib/security/blocks";
 import { hashIp, hashMessage } from "@/lib/security/hash";
 import { getSettings } from "@/lib/settings";
 import { getAdminBase } from "@/lib/admin-path";
+import { ACTIONS, logActivity } from "@/lib/audit";
 
 /**
  * Contact submission handler.
@@ -199,6 +201,8 @@ export async function submitContact(
     email: data.email,
     message: cleanMessage,
     repeatedMessage: repeated,
+    maxLinks: settings?.spamMaxLinks ?? 1,
+    blockDisposableEmail: settings?.blockDisposableEmail ?? true,
     ...(configuredKeywords.length > 0
       ? { bannedKeywords: configuredKeywords }
       : {}),
@@ -210,6 +214,26 @@ export async function submitContact(
       signals: verdict.signals.map((signal) => signal.code),
       links: countLinks(cleanMessage),
     });
+
+    // Auto-block (MVP.md §8.2). Only when the owner enabled it, and only after
+    // the threshold is crossed inside 24 hours. A single false positive must
+    // never block an address, which is why this counts rather than reacts.
+    await logActivity({
+      action: ACTIONS.spamBlocked,
+      entity: "lead",
+      meta: {
+        score: verdict.score,
+        signals: verdict.signals.map((signal) => signal.code),
+      },
+      ipHash,
+    });
+
+    await maybeAutoBlock({
+      ip,
+      ipHash,
+      threshold: settings?.autoBlockAfter ?? 3,
+    });
+
     // Same response as success: a spammer learns nothing, and a false positive
     // is recoverable from the log rather than lost to a scary error message.
     return { status: "success", message: "Thanks — your message is on its way." };

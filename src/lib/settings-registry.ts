@@ -21,7 +21,7 @@ export type SettingDefinition = {
   label: string;
   kind: SettingKind;
   /** Grouping in the admin form. */
-  group: "Identity" | "Contact" | "SEO" | "Analytics" | "Footer" | "System";
+  group: "Identity" | "Contact" | "SEO" | "Analytics" | "Footer" | "Security" | "System";
   help?: string;
   placeholder?: string;
   /** Used when the row is missing or unreadable. */
@@ -298,6 +298,39 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     help: "One per line. A message containing these scores as spam. Leave empty to use the built-in list.",
   },
   {
+    key: "security.spamMaxLinks",
+    label: "Maximum links per message",
+    kind: "number",
+    group: "Security",
+    default: 1,
+    help: "Links beyond this count score as spam. One is normal for a signature.",
+  },
+  {
+    key: "security.blockDisposableEmail",
+    label: "Block disposable email domains",
+    kind: "boolean",
+    group: "Security",
+    default: true,
+    help: "Reject throwaway inboxes (mailinator, yopmail and similar) outright.",
+  },
+  {
+    key: "security.autoBlockAfter",
+    label: "Auto-block after repeated spam",
+    kind: "number",
+    group: "Security",
+    default: 3,
+    help: "Block the sender's IP after this many blocked submissions in 24 hours. Zero disables auto-blocking.",
+  },
+  {
+    key: "security.loginAllowlist",
+    label: "Admin IP allowlist",
+    kind: "textarea",
+    group: "Security",
+    default: "",
+    maxLength: 2000,
+    help: "One IP or CIDR per line. When set, only these addresses may reach the admin login. Leave empty to allow everyone. Locking yourself out requires database access to undo.",
+  },
+  {
     key: "notify.telegramEnabled",
     label: "Telegram notifications",
     kind: "boolean",
@@ -320,6 +353,7 @@ export const SETTING_GROUPS = [
   "Contact",
   "SEO",
   "Footer",
+  "Security",
   "System",
 ] as const;
 
@@ -365,6 +399,10 @@ export type SiteSettings = {
   analyticsRetentionMonths: number;
   maintenanceEnabled: boolean;
   bannedKeywords: string;
+  spamMaxLinks: number;
+  blockDisposableEmail: boolean;
+  autoBlockAfter: number;
+  loginAllowlist: string;
   telegramEnabled: boolean;
   emailEnabled: boolean;
 };
@@ -401,6 +439,10 @@ export const SETTING_FIELD_NAMES: Record<string, keyof SiteSettings> = {
   "analytics.retentionMonths": "analyticsRetentionMonths",
   "maintenance.enabled": "maintenanceEnabled",
   "contact.bannedKeywords": "bannedKeywords",
+  "security.spamMaxLinks": "spamMaxLinks",
+  "security.blockDisposableEmail": "blockDisposableEmail",
+  "security.autoBlockAfter": "autoBlockAfter",
+  "security.loginAllowlist": "loginAllowlist",
   "notify.telegramEnabled": "telegramEnabled",
   "notify.emailEnabled": "emailEnabled",
 };

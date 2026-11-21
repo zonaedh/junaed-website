@@ -1,0 +1,41 @@
+version: 2
+
+# Dependabot (MVP.md §8.5).
+#
+# Weekly, grouped, and capped: a security tool that opens forty pull requests a
+# week gets muted, and a muted tool is worse than none. Security updates are
+# still raised immediately by GitHub regardless of this schedule.
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Asia/Dhaka"
+    open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps land as one PR so review stays a single decision.
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    # Majors stay separate: they are the ones that need reading.
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "ci"

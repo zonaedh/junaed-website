@@ -550,3 +550,66 @@ layout rather than relying on the snippet's own `pageScope`, so a snippet scoped
 still cannot reach the admin tree. The root layout is now async and reads headers, which
 makes every route dynamic — already true for this app, since the public layout reads the
 database on every request.
+
+---
+
+## D-040 — Rate limiting is in-process, with the account lockout as the durable ceiling
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** MVP.md §8.1 asks for a global middleware limiter and per-endpoint
+limits. The obvious production answer is Redis or Upstash, but neither is
+configured, and the Next docs are explicit that the proxy must not do slow data
+fetching on every request.
+
+**Decision.** src/lib/security/proxy-limiter.ts is an in-process fixed-window
+counter with an opportunistic sweep. The rules are pure data in
+ate-limit-rules.ts so the proxy and the Server Actions share them. The
+per-account login lockout remains the durable ceiling; the IP limiter is a cheap
+first gate.
+
+**Consequences.** The limiter is per-instance and resets on deploy, so it does not
+bound a distributed flood on its own. Swapping in Upstash means replacing one
+module; the rules and call sites do not change. If the site ever runs more than one
+instance, this must be revisited before launch.
+
+---
+
+## D-041 — Blocking is by address only; leads and logs keep hashes, not IPs
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** MVP.md §8.2 asks for a one-click "Block this IP" from a lead or a log
+entry. Phase 7 deliberately stores only ipHash, a salted per-day hash, and never
+the raw address.
+
+**Decision.** The one-click block from a lead or log entry is not built. Blocking
+happens on /admin/security, where the raw address is typed in. A hash cannot be
+reversed into an address, and blocking a hash is meaningless because the proxy
+matches on the real address.
+
+**Consequences.** The privacy model from Phase 7 is preserved at the cost of one
+convenience feature. If blocking from a lead is genuinely needed later, the honest
+options are storing the raw IP on leads (a privacy change that needs a decision and
+a retention policy) or adding a manual "block the address behind this lead" step
+where the operator supplies the address. Neither is done here.
+
+---
+
+## D-042 — Staff accounts are created with a set password, not an emailed invite
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** MVP.md §8.4 asks for invite-by-email through Resend. Resend is still
+not configured, the same blocker that deferred password reset in Phase 5.
+
+**Decision.** Adding a staff account creates it with a password the owner sets and
+hands over through a channel they control. The screen states this rather than
+implying an email was sent.
+
+**Consequences.** The flow works today without a mail provider. When Resend is
+configured, the invite can be switched to a single-use token without changing the
+repository or the permission rules; only the delivery step changes.
