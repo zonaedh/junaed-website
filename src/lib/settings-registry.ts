@@ -21,7 +21,7 @@ export type SettingDefinition = {
   label: string;
   kind: SettingKind;
   /** Grouping in the admin form. */
-  group: "Identity" | "Contact" | "SEO" | "Footer" | "System";
+  group: "Identity" | "Contact" | "SEO" | "Analytics" | "Footer" | "System";
   help?: string;
   placeholder?: string;
   /** Used when the row is missing or unreadable. */
@@ -227,6 +227,52 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     maxLength: 254,
   },
   {
+    key: "analytics.gtmId",
+    label: "Google Tag Manager ID",
+    kind: "text",
+    group: "Analytics",
+    default: "",
+    maxLength: 40,
+    placeholder: "GTM-XXXXXXX",
+    help: "Loads the GTM container. If set, prefer putting GA4 and the pixel inside GTM.",
+  },
+  {
+    key: "analytics.ga4Id",
+    label: "GA4 measurement ID",
+    kind: "text",
+    group: "Analytics",
+    default: "",
+    maxLength: 40,
+    placeholder: "G-XXXXXXXXXX",
+    help: "Loaded directly. Leave empty if GA4 already fires through GTM.",
+  },
+  {
+    key: "analytics.metaPixelId",
+    label: "Meta Pixel ID",
+    kind: "text",
+    group: "Analytics",
+    default: "",
+    maxLength: 40,
+    help: "Loaded directly. Leave empty if the pixel already fires through GTM.",
+  },
+  {
+    key: "analytics.clarityId",
+    label: "Microsoft Clarity ID",
+    kind: "text",
+    group: "Analytics",
+    default: "",
+    maxLength: 40,
+    help: "Session recordings and heatmaps. Leave empty if it already fires through GTM.",
+  },
+  {
+    key: "analytics.consentRequired",
+    label: "Require cookie consent",
+    kind: "boolean",
+    group: "Analytics",
+    default: true,
+    help: "On: no tracking tag loads until the visitor accepts. Off: tags load immediately (only for jurisdictions that do not require consent).",
+  },
+  {
     key: "analytics.retentionMonths",
     label: "Analytics retention (months)",
     kind: "number",
@@ -311,6 +357,11 @@ export type SiteSettings = {
   footerText: string;
   emailFromName: string;
   emailFromAddress: string;
+  gtmId: string;
+  ga4Id: string;
+  metaPixelId: string;
+  clarityId: string;
+  consentRequired: boolean;
   analyticsRetentionMonths: number;
   maintenanceEnabled: boolean;
   bannedKeywords: string;
@@ -342,6 +393,11 @@ export const SETTING_FIELD_NAMES: Record<string, keyof SiteSettings> = {
   "footer.text": "footerText",
   "email.fromName": "emailFromName",
   "email.fromAddress": "emailFromAddress",
+  "analytics.gtmId": "gtmId",
+  "analytics.ga4Id": "ga4Id",
+  "analytics.metaPixelId": "metaPixelId",
+  "analytics.clarityId": "clarityId",
+  "analytics.consentRequired": "consentRequired",
   "analytics.retentionMonths": "analyticsRetentionMonths",
   "maintenance.enabled": "maintenanceEnabled",
   "contact.bannedKeywords": "bannedKeywords",

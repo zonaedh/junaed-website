@@ -2,7 +2,7 @@
 > Overwrite this file at every checkpoint. Keep it short, specific and true.
 > A new agent must be able to continue from this file alone (plus AGENT_GUIDE.md).
 
-**Last updated:** 2026-11-21 11:05 (UTC+6) · **By:** saffron
+**Last updated:** 2026-11-21 11:25 (UTC+6) · **By:** saffron
 
 ## 0. Repository — push at every phase and every checkpoint
 
@@ -19,45 +19,50 @@ git rev-list --left-right --count HEAD...origin/main   # must print: 0   0
 If the push is rejected, **never force-push** over history you did not create. Fetch, merge,
 resolve, push. Full protocol: `AGENT_GUIDE.md` §3.
 
-**Current sync state:** `main` is in sync with `origin/main` (0 ahead, 0 behind).
-Phases 0–6 are pushed. Phase 6 is tagged `phase-06-complete`.
+**Current sync state:** Phase 7 is committed and pushed. Phases 0–7 are on `origin/main`.
+Phase 7 is tagged `phase-07-complete`.
 
 ## 1. Where We Are
-- **Current phase:** Phase 6 complete and verified in a browser and over HTTP.
-- **Phase progress:** Phase 0 local done (hosted half blocked on owner), Phases 1–6 complete.
-- **Gates:** lint, typecheck, 178/178 tests and build all pass as of this handoff.
+- **Current phase:** Phase 7 complete, verified in a browser and over HTTP.
+- **Phase progress:** Phase 0 local done (hosted half blocked on owner), Phases 1–7 complete.
+- **Gates:** lint, typecheck, 226/226 tests and build all pass as of this handoff.
 
-## 2. What Phase 6 Delivered
-- **Metadata** — one `buildMetadata()` in `src/lib/seo/metadata.ts`, called by every public
-  page. Titles render once (it uses `title: { absolute }` because it applies the template
-  itself; the root layout would otherwise apply it a second time).
-- **JSON-LD** — Person, WebSite, ProfessionalService on home; Service on service pages;
-  BlogPosting on posts; ContactPage; BreadcrumbList everywhere inner.
-- **OG images** — dynamic per post via `next/og`. Verified: 200, `image/png`, 92 KB.
-- **sitemap.xml / robots.txt / rss.xml** — all dynamic, all reading the database.
-- **Security headers** — CSP, XFO, Referrer-Policy, Permissions-Policy, nosniff; HSTS in
-  production only.
-- **Redirect manager + 404 log** — Admin → SEO. A 404 becomes a redirect in one click.
-- **SEO panel in the post editor** — live SERP preview, counters, focus keyword, 0–100 score.
+## 2. What Phase 7 Delivered
+- **Consent first** — `ConsentBanner` writes `jh_consent` and fires `jh:consent`. Nothing
+  third-party loads before an explicit accept; with `consentRequired` on, not even the GTM
+  container loads.
+- **Tag loader** — GTM, GA4, Meta Pixel, Clarity, all gated on consent, with Consent Mode v2
+  defaults pushed ahead of the first tag.
+- **First-party tracking** — `POST /api/track`, always 204. Bots dropped, DNT honoured, path
+  normalised and validated, referrer stored as a label, raw IP never stored.
+- **Custom scripts** — admin CRUD at `/admin/scripts` with live risk warnings, enable/disable,
+  and a one-click rollback that keeps the previous code.
+- **Dashboard** — real KPIs, daily series chart, widgets, alerts bell.
+- **Analytics page** — range selector, breakdowns, daily series.
+- **Alerts** — list, mark read, mark all read, unread sidebar badge.
+- **Lead conversion event** — `generate_lead` fires from the contact form.
 
 ## 3. Three Things That Will Bite You
-1. **Redirects are NOT in `proxy.ts`.** Next's docs forbid data fetching there. A catch-all
-   route (`src/app/(site)/[...path]/page.tsx`) owns redirects and 404 logging (D-035).
-2. **Permanent redirects are 308, not 301.** `permanentRedirect()` has no 301 form. The UI
-   says "Permanent (308)" on purpose (D-036). Do not "fix" it back to 301.
-3. **The OG image handler takes `{ params }` as a destructured object**, not as a second
-   argument. Passing `(request, { params })` throws at runtime while typechecking fine.
+1. **A client component must never import `@/lib/analytics/scripts`.** It pulls `@/db` and the
+   Postgres driver into the browser bundle; the build fails with `Can't resolve 'util/types'`.
+   Import the pure rules from `@/lib/analytics/script-rules` (D-038).
+2. **Head snippets mount in the root layout, not the site layout.** `(site)/layout.tsx` renders
+   only `body_start` and `body_end`. `src/app/layout.tsx` renders `head` and skips it for
+   `/admin` paths (D-039).
+3. **Two page views in dev are StrictMode.** `reactStrictMode: true` double-invokes effects in
+   development only. Production sends one beacon per navigation. Do not "fix" it.
 
 ## 4. Next Phase Starting Notes
-1. **Phase 7 is analytics, tracking and the dashboard** — read `MVP.md` §7 first.
-2. Build the **consent banner before any tracker fires**. Loading GA4 or a pixel before
-   consent is the one thing in Phase 7 that is genuinely hard to undo.
-3. `page_views` already exists in the schema from Phase 2 and is still unused.
+1. **Phase 8 is performance, accessibility and launch readiness** — read `MVP.md` §8 first.
+2. The root layout is now async and reads `headers()`, so every route is dynamic. If Phase 8
+   wants static pages, that is the thing to unpick first — and the public layout already reads
+   the database per request, so it is not a new constraint.
+3. `sessionHash` on `page_views` is written as `null` on purpose. A real session id needs a
+   cookie, which is a consent-scope decision for the owner.
 
 ## 5. Local Environment
 - `npm run db:local` — PGlite on 127.0.0.1:5433 (D-022).
 - `npm run dev` — dev server on :3000. **Restart after adding settings keys**; the
   registry is read at boot.
-- Owner login for local testing: `SEED_OWNER_EMAIL` / `SEED_OWNER_PASSWORD` in `.env.local`.
-- PowerShell, not bash. No `&&`. Write files with editor tools, never `Set-Content` with
-  an inline template literal containing backticks — it silently eats them.
+- Load the site at `http://localhost:3000`, not `127.0.0.1` — Next blocks cross-origin HMR
+  from `127.0.0.1` in dev and the page will not hydrate.

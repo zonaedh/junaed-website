@@ -49,6 +49,7 @@ const NAV: NavGroup[] = [
       { href: "/leads", label: "Leads", icon: "✉", role: "support" },
       { href: "/analytics", label: "Analytics", icon: "◔", role: "admin" },
       { href: "/seo", label: "SEO", icon: "⌕", role: "editor" },
+    { href: "/alerts", label: "Alerts", icon: "◔", role: "support" },
     ],
   },
   {
@@ -58,6 +59,7 @@ const NAV: NavGroup[] = [
       { href: "/staff", label: "Staff", icon: "☰", role: "owner" },
       { href: "/security", label: "Security", icon: "⛨", role: "owner" },
       { href: "/backups", label: "Backups", icon: "⤓", role: "owner" },
+    { href: "/scripts", label: "Scripts", icon: "‹›", role: "admin" },
     ],
   },
 ];

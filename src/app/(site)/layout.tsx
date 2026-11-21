@@ -2,6 +2,11 @@ import type { ReactNode } from "react";
 import { Header } from "@/components/site/header";
 import { Footer } from "@/components/site/footer";
 import { getSettings } from "@/lib/settings";
+import { ConsentBanner } from "@/components/analytics/consent-banner";
+import { AnalyticsTracker } from "@/components/analytics/analytics-tracker";
+import { TrackingTags } from "@/components/analytics/tracking-tags";
+import { CustomScripts } from "@/components/analytics/custom-scripts";
+import { headers } from "next/headers";
 
 /**
  * Public site layout.
@@ -20,6 +25,10 @@ export default async function SiteLayout({
 }) {
   const settings = await getSettings();
 
+  // The proxy sets this on every public request so a server component can scope
+  // custom snippets without turning the layout into a client component.
+  const pathname = (await headers()).get("x-pathname") ?? "/";
+
   return (
     <div className="flex min-h-dvh flex-col">
       {/* Without JS the reveal animation never runs, so force content visible. */}
@@ -34,6 +43,7 @@ export default async function SiteLayout({
         Skip to content
       </a>
       <Header siteName={settings.name} shortName={settings.shortName} />
+      <CustomScripts pathname={pathname} location="body_start" />
       <main id="main" className="flex-1">
         {children}
       </main>
@@ -42,6 +52,23 @@ export default async function SiteLayout({
         shortName={settings.shortName}
         footerText={settings.footerText}
       />
+
+      {/*
+        Analytics lives here and only here. The admin tree has its own layout,
+        so no tracking tag can ever load on the admin surface (MVP.md §7.1).
+      */}
+      <TrackingTags
+        config={{
+          gtmId: settings.gtmId,
+          ga4Id: settings.ga4Id,
+          metaPixelId: settings.metaPixelId,
+          clarityId: settings.clarityId,
+          consentRequired: settings.consentRequired,
+        }}
+      />
+      <AnalyticsTracker />
+      <ConsentBanner />
+      <CustomScripts pathname={pathname} location="body_end" />
     </div>
   );
 }

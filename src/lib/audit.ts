@@ -78,4 +78,9 @@ export const ACTIONS = {
   redirectUpdated: "seo.redirect.updated",
   redirectDeleted: "seo.redirect.deleted",
   notFoundCleared: "seo.notfound.cleared",
+  scriptCreated: "script.created",
+  scriptUpdated: "script.updated",
+  scriptDeleted: "script.deleted",
+  scriptRolledBack: "script.rolled_back",
+  alertRead: "alert.read",
 } as const;

@@ -508,3 +508,45 @@ count.
 broken, and which matter most. The trade is that per-visitor detail (referrer, user agent,
 time of each hit) is overwritten rather than accumulated — acceptable, because the action
 this log exists to prompt is "create a redirect", not "investigate one visitor".
+---
+
+## D-038 — Pure script rules live in their own module, not in the repository
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** The scripts admin form is a client component and needs `scriptWarnings`
+to show live warnings while the owner types. It imported them from
+`src/lib/analytics/scripts.ts`, which imports `@/db`. That dragged the Postgres driver
+into the browser bundle and failed the build with `Can't resolve 'util/types'` inside
+`pg/lib/utils.js`.
+
+**Decision.** The pure rules (`scriptAppliesTo`, `scriptWarnings`) live in
+`src/lib/analytics/script-rules.ts`, which imports nothing. The repository keeps the
+database work only. Client components import from `script-rules`; server components may
+import either.
+
+**Consequences.** One more file, and a rule to remember: a helper that a client component
+needs must not sit beside database code. This is the same failure the project manual
+already warns about for `@/lib/rbac`, `@/db`, `@/lib/settings`, `@/lib/pages` and
+`@/lib/media/storage` — it just arrived through a new door.
+
+---
+
+## D-039 — Head snippets mount in the root layout, gated on the path
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** Custom snippets have three locations: `head`, `body_start`, `body_end`. The
+public site layout renders only the two body positions, because a layout cannot render
+into `<head>`. Snippets saved to `head` were silently never injected.
+
+**Decision.** `src/app/layout.tsx` reads `x-pathname` from the proxy and renders
+`CustomScripts location="head"`, skipping it entirely when the path starts with `/admin`.
+
+**Consequences.** All three locations now work. The admin gate is checked in the root
+layout rather than relying on the snippet's own `pageScope`, so a snippet scoped to `/`
+still cannot reach the admin tree. The root layout is now async and reads headers, which
+makes every route dynamic — already true for this app, since the public layout reads the
+database on every request.

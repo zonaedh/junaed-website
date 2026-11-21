@@ -97,7 +97,11 @@ export function proxy(request: NextRequest) {
     return new NextResponse("Not found", { status: 404 });
   }
 
-  return NextResponse.next();
+  // Forward the path so server components can scope custom snippets without
+  // becoming client components. Set on the request, not the response.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 /**

@@ -1,7 +1,7 @@
 # PROJECT_UPDATE.md
 Human-readable status of **junaedhossain.com + admin panel**. Update at every phase end and major event.
 
-**Last updated:** 2026-11-21 · **Overall progress:** 6.6 / 10 phases
+**Last updated:** 2026-11-21 · **Overall progress:** 7.7 / 10 phases
 
 ## Phase Status
 | # | Phase | Status | Started | Completed | Log |
@@ -13,7 +13,7 @@ Human-readable status of **junaedhossain.com + admin panel**. Update at every ph
 | 4 | Blog & Portfolio | ✅ Complete (verified end-to-end) | 2026-11-21 | 2026-11-21 | [phase-04](logs/phase-04-log.md) |
 | 5 | Contact, Leads, Notifications | ✅ Complete (notifications dormant until keys supplied) | 2026-11-21 | 2026-11-21 | [phase-05](logs/phase-05-log.md) |
 | 6 | On-Page SEO | ✅ Complete (verified end-to-end) | 2026-11-21 | 2026-11-21 | [phase-06](logs/phase-06-log.md) |
-| 7 | Analytics, Tracking, Dashboard | ⬜ | | | |
+| 7 | Analytics, Tracking, Dashboard | ✅ Complete (verified in a browser and over HTTP) | 2026-11-21 | 2026-11-21 | [phase-07](logs/phase-07-log.md) |
 | 8 | Security, IP Block, Logs, Staff | ⬜ | | | |
 | 9 | Backups, CI/CD, QA, Launch | ⬜ | | | |
 
@@ -22,9 +22,20 @@ Legend: ⬜ not started · 🟨 in progress · ✅ complete · ⛔ blocked
 ## Live URLs
 - Public: https://junaedhossain.com — not deployed
 - Admin: https://admin.junaedhossain.com — not deployed (noindex verified locally only)
-- Repo: not created · Vercel project: not created
+- Repo: https://github.com/zonaedh/junaed-website (Phases 0–7 pushed) · Vercel project: not created
 
 ## Changelog (newest first)
+- 2026-11-21 — **Phase 7 complete.** Consent banner and a consent-gated tag loader (GTM,
+  GA4, Meta Pixel, Clarity) with Consent Mode v2 defaults pushed first. First-party
+  tracking at `POST /api/track`: bots dropped, DNT honoured, paths normalised and
+  validated, referrer stored as a label, raw IP never stored (day-salted hash only).
+  Custom-scripts manager with live risk warnings, enable/disable and one-click rollback.
+  Dashboard with real KPIs, daily series and widgets; analytics page with range selector
+  and breakdowns; alerts list with mark-read and a sidebar badge; `generate_lead` wired
+  into the contact form. Two real bugs fixed during verification: a client component
+  importing the scripts repository pulled the Postgres driver into the browser bundle and
+  broke the build (D-038), and head-location snippets had no mount point so they never
+  rendered (D-039). lint/typecheck/226 tests/build all pass.
 - 2026-11-21 — **Phase 6 complete.** Every public page now emits database-driven metadata
   and JSON-LD (Person, WebSite, ProfessionalService, Service, BlogPosting, ContactPage,
   BreadcrumbList). sitemap.xml, robots.txt and rss.xml are dynamic and read the database.
