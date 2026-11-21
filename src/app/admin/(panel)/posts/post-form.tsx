@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { savePost, type PostState } from "./actions";
 import { PostEditor } from "./post-editor";
+import { SeoPanel } from "./seo-panel";
 import { MediaPicker } from "@/components/admin/media-picker";
 import { slugify, type TiptapDoc } from "@/lib/posts/content";
 import type { MediaItem } from "@/lib/media/types";
@@ -28,6 +29,10 @@ export function PostForm({
   categories,
   media,
   adminBase,
+  bodyText,
+  imageAlts,
+  internalLinks,
+  siteHost,
 }: {
   postId: number | null;
   initial: {
@@ -44,10 +49,16 @@ export function PostForm({
     seoDescription: string;
     canonicalUrl: string;
     noindex: boolean;
+    focusKeyword?: string;
   };
   categories: { id: number; name: string }[];
   media: MediaItem[];
   adminBase: string;
+  /** Plain-text body, for the SEO checklist. */
+  bodyText: string;
+  imageAlts: string[];
+  internalLinks: number;
+  siteHost: string;
 }) {
   const action = savePost.bind(null, postId);
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -175,53 +186,20 @@ export function PostForm({
         </div>
 
         {/* ---------------- SEO ---------------- */}
+        <SeoPanel
+          initialTitle={initial.seoTitle}
+          initialDescription={initial.seoDescription}
+          initialFocusKeyword={initial.focusKeyword ?? ""}
+          slug={slug}
+          siteHost={siteHost}
+          bodyText={bodyText}
+          imageAlts={imageAlts}
+          internalLinks={internalLinks}
+        />
+
         <section className="rounded-[16px] border border-line bg-white p-4 sm:p-5">
-          <h2 className="mb-3 text-sm font-bold">Search appearance</h2>
-
-          <div className="mb-4 rounded-lg border border-line bg-surface p-3">
-            <p className="truncate text-[13px] text-[#1a0dab]">
-              {initial.seoTitle || title || "Post title"}
-            </p>
-            <p className="truncate text-[11px] text-emerald-800">
-              junaedhossain.com › blog › {slugPreview}
-            </p>
-            <p className="mt-0.5 line-clamp-2 text-[11px] leading-[1.5] text-muted">
-              {initial.seoDescription ||
-                initial.excerpt ||
-                "The meta description appears here."}
-            </p>
-          </div>
-
+          <h2 className="mb-3 text-sm font-bold">Advanced</h2>
           <div className="space-y-3">
-            <div>
-              <label htmlFor="seoTitle" className="mb-1 block text-xs font-bold">
-                SEO title
-              </label>
-              <input
-                id="seoTitle"
-                name="seoTitle"
-                defaultValue={initial.seoTitle}
-                maxLength={200}
-                placeholder={title || "Defaults to the post title"}
-                className={field}
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="seoDescription"
-                className="mb-1 block text-xs font-bold"
-              >
-                Meta description
-              </label>
-              <textarea
-                id="seoDescription"
-                name="seoDescription"
-                rows={2}
-                defaultValue={initial.seoDescription}
-                maxLength={320}
-                className={field}
-              />
-            </div>
             <div>
               <label
                 htmlFor="canonicalUrl"

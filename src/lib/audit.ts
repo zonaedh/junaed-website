@@ -74,4 +74,8 @@ export const ACTIONS = {
   leadReply: "lead.reply",
   leadDelete: "lead.deleted",
   leadExported: "lead.exported",
+  redirectCreated: "seo.redirect.created",
+  redirectUpdated: "seo.redirect.updated",
+  redirectDeleted: "seo.redirect.deleted",
+  notFoundCleared: "seo.notfound.cleared",
 } as const;

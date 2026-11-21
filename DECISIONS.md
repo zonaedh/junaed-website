@@ -1,4 +1,4 @@
-﻿# DECISIONS.md
+# DECISIONS.md
 Short decision records. Don't re-debate "Accepted" items without the user's approval.
 Format: **ID · Title · Status · Date** → Decision → Why → Trade-off.
 
@@ -450,3 +450,61 @@ Supplying the key is the only remaining step.
 **Consequences.** The contact pipeline is complete and correct today; notifications
 turn on with a key and a toggle, no code change. The cost is that the live provider
 path is unverified until someone supplies credentials.
+---
+
+## D-035 — Redirects are enforced by a catch-all route, not the proxy
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** A redirect manager needs to read the database on every request. The obvious
+home for that is `proxy.ts`, which already runs on every request.
+
+**Decision.** It is not. Next's own documentation is explicit that the proxy is not for
+data fetching and that `fetch` caching options do not apply there. A catch-all route at
+`src/app/(site)/[...path]/page.tsx` owns redirect lookup and 404 logging instead: it runs
+in the Node runtime, can read the database, and still returns a real redirect status.
+
+**Consequences.** Redirects cost one cached read on a miss, not on every request, because
+the catch-all only runs when no real route matched. The trade is that a redirect for a
+path that *does* exist as a page cannot be expressed — which is correct, since shadowing
+a live page with a redirect is a mistake, not a feature.
+
+---
+
+## D-036 — Permanent redirects are stored and sent as 308, not 301
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** MVP.md asks for a 301 redirect manager. Next exposes `permanentRedirect()`
+and `redirect()`, which emit 308 and 307 respectively. There is no API that sends a
+literal 301.
+
+**Decision.** Store and send 308 for permanent and 307 for temporary. The admin UI says
+"Permanent (308)" and "Temporary (307)" rather than promising a code the app cannot
+produce. Legacy rows holding 301/302 are still honoured on read.
+
+**Consequences.** 308 and 301 are equally permanent for search engines, so nothing is
+lost for SEO. The cost is that an owner who specifically needs a literal 301 (some
+legacy crawlers, some CDN rules) cannot get one from this admin, and would need a
+`next.config.ts` redirects entry instead.
+
+---
+
+## D-037 — The 404 log upserts on path so it ranks distinct URLs
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** A naive 404 log inserts a row per miss. A crawler discovering one dead link
+can produce thousands of rows for a single URL, burying the other broken URLs.
+
+**Decision.** `not_found_log` has a unique index on `path` and inserts with an upsert that
+increments `hits` and moves `last_seen_at`. The admin lists distinct paths ranked by hit
+count.
+
+**Consequences.** The list answers the question the owner actually has: which URLs are
+broken, and which matter most. The trade is that per-visitor detail (referrer, user agent,
+time of each hit) is overwritten rather than accumulated — acceptable, because the action
+this log exists to prompt is "create a redirect", not "investigate one visitor".

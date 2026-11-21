@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/rbac";
 import { listCategories } from "@/lib/posts/repository";
 import { listMediaForAdmin } from "@/lib/media/repository";
 import { EMPTY_DOC } from "@/lib/posts/content";
+import { getSeoDefaults } from "@/lib/seo/repository";
 import { PostForm } from "../post-form";
 
 export const metadata: Metadata = { title: "New post" };
@@ -13,10 +14,12 @@ export default async function NewPostPage() {
   await requireRole("editor");
   const base = await getAdminBase();
 
-  const [categories, media] = await Promise.all([
+  const [categories, media, seo] = await Promise.all([
     listCategories(),
     listMediaForAdmin({ type: "image" }),
+    getSeoDefaults(),
   ]);
+  const seoHost = seo.siteUrl.replace(/^https?:\/\//, "").replace(/\/+$/, "");
 
   return (
     <div className="mx-auto max-w-[1180px]">
@@ -52,6 +55,10 @@ export default async function NewPostPage() {
         categories={categories}
         media={media}
         adminBase={base}
+        bodyText=""
+        imageAlts={[]}
+        internalLinks={0}
+        siteHost={seoHost}
       />
     </div>
   );

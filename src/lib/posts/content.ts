@@ -68,8 +68,67 @@ export function docToPlainText(doc: TiptapDoc | null | undefined): string {
   return parts.join("").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-export function countWords(doc: TiptapDoc | null | undefined): number {
-  const text = docToPlainText(doc);
+/**
+ * Facts the SEO checklist needs from a post body (MVP.md §6.2).
+ *
+ * Walks the doc once and collects the three things the scorer actually uses:
+ * the first heading (the H1/H2 the reader sees first), every image alt, and
+ * the count of internal links. Doing this here keeps the editor component free
+ * of document traversal.
+ */
+export function analyseDoc(doc: TiptapDoc | null | undefined): {
+  firstHeading: string;
+  imageAlts: string[];
+  internalLinks: number;
+} {
+  const imageAlts: string[] = [];
+  let firstHeading = "";
+  let internalLinks = 0;
+
+  if (!doc || !Array.isArray(doc.content)) {
+    return { firstHeading, imageAlts, internalLinks };
+  }
+
+  function walk(node: TiptapNode) {
+    if (
+      !firstHeading &&
+      (node.type === "heading" || node.type === "heading1") &&
+      Array.isArray(node.content)
+    ) {
+      firstHeading = node.content
+        .map((child) => (typeof child.text === "string" ? child.text : ""))
+        .join("")
+        .trim();
+    }
+
+    if (node.type === "image") {
+      const attrs = node.attrs ?? {};
+      const alt = typeof attrs.alt === "string" ? attrs.alt : "";
+      imageAlts.push(alt);
+    }
+
+    // A link mark carries its href on the text node's marks.
+    if (Array.isArray(node.marks)) {
+      for (const mark of node.marks) {
+        if (mark.type !== "link") continue;
+        const href = typeof mark.attrs?.href === "string" ? mark.attrs.href : "";
+        // Internal means site-relative or same-host; an external link does not
+        // help internal linking, which is what the check is about.
+        if (href.startsWith("/") || href.startsWith("#")) internalLinks += 1;
+      }
+    }
+
+    if (Array.isArray(node.content)) {
+      for (const child of node.content) walk(child);
+    }
+  }
+
+  for (const node of doc.content) walk(node);
+
+  return { firstHeading, imageAlts, internalLinks };
+}
+
+export function countWords(doc: TiptapDoc | null | undefined): number {  const text = docToPlainText(doc);
   if (!text) return 0;
   return text.split(/\s+/).filter(Boolean).length;
 }

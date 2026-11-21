@@ -132,6 +132,76 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     maxLength: 320,
   },
   {
+    key: "seo.defaultOgImage",
+    label: "Default social share image",
+    kind: "image",
+    group: "SEO",
+    default: "",
+    help: "Used when a page or post has no image of its own. 1200×630 works best.",
+  },
+  {
+    key: "seo.twitterHandle",
+    label: "X / Twitter handle",
+    kind: "text",
+    group: "SEO",
+    default: "",
+    maxLength: 40,
+    placeholder: "@junaedhossain",
+    help: "Used for the Twitter card attribution. Include the @.",
+  },
+  {
+    key: "seo.googleVerification",
+    label: "Google Search Console code",
+    kind: "text",
+    group: "SEO",
+    default: "",
+    maxLength: 200,
+    help: "The content value of the google-site-verification meta tag.",
+  },
+  {
+    key: "seo.bingVerification",
+    label: "Bing Webmaster code",
+    kind: "text",
+    group: "SEO",
+    default: "",
+    maxLength: 200,
+    help: "The content value of the msvalidate.01 meta tag.",
+  },
+  {
+    key: "site.url",
+    label: "Public site URL",
+    kind: "text",
+    group: "SEO",
+    default: "https://junaedhossain.com",
+    maxLength: 200,
+    help: "No trailing slash. Used for canonicals, the sitemap and structured data.",
+  },
+  {
+    key: "site.socialLinkedin",
+    label: "LinkedIn URL",
+    kind: "text",
+    group: "SEO",
+    default: "",
+    maxLength: 300,
+    help: "Feeds the Person structured data so search engines can link your profiles.",
+  },
+  {
+    key: "site.socialGithub",
+    label: "GitHub URL",
+    kind: "text",
+    group: "SEO",
+    default: "",
+    maxLength: 300,
+  },
+  {
+    key: "site.socialTwitter",
+    label: "X / Twitter URL",
+    kind: "text",
+    group: "SEO",
+    default: "",
+    maxLength: 300,
+  },
+  {
     key: "footer.text",
     label: "Footer text",
     kind: "text",
@@ -230,6 +300,14 @@ export type SiteSettings = {
   timezone: string;
   titleTemplate: string;
   defaultDescription: string;
+  defaultOgImage: string;
+  twitterHandle: string;
+  googleVerification: string;
+  bingVerification: string;
+  siteUrl: string;
+  socialLinkedin: string;
+  socialGithub: string;
+  socialTwitter: string;
   footerText: string;
   emailFromName: string;
   emailFromAddress: string;
@@ -253,6 +331,14 @@ export const SETTING_FIELD_NAMES: Record<string, keyof SiteSettings> = {
   "site.timezone": "timezone",
   "seo.titleTemplate": "titleTemplate",
   "seo.defaultDescription": "defaultDescription",
+  "seo.defaultOgImage": "defaultOgImage",
+  "seo.twitterHandle": "twitterHandle",
+  "seo.googleVerification": "googleVerification",
+  "seo.bingVerification": "bingVerification",
+  "site.url": "siteUrl",
+  "site.socialLinkedin": "socialLinkedin",
+  "site.socialGithub": "socialGithub",
+  "site.socialTwitter": "socialTwitter",
   "footer.text": "footerText",
   "email.fromName": "emailFromName",
   "email.fromAddress": "emailFromAddress",

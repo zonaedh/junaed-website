@@ -260,6 +260,8 @@ export const posts = pgTable(
     seoTitle: varchar("seo_title", { length: 200 }),
     seoDescription: varchar("seo_description", { length: 320 }),
     canonicalUrl: text("canonical_url"),
+    /** Drives the SEO checklist. Never rendered on the public site. */
+    focusKeyword: varchar("focus_keyword", { length: 80 }),
     ogImageId: integer("og_image_id").references(() => media.id, {
       onDelete: "set null",
     }),
@@ -524,6 +526,33 @@ export const pageViews = pgTable(
     index("page_views_created_idx").on(table.createdAt),
     index("page_views_path_idx").on(table.path),
   ],
+);
+
+/* ------------------------------ 404 log ----------------------------------- */
+
+/**
+ * Distinct broken URLs, one row per path.
+ *
+ * The upsert-on-path shape is deliberate: a crawler hitting one dead link ten
+ * thousand times should produce one row with `hits = 10000`, not ten thousand
+ * rows. The owner needs the list of *distinct* broken URLs, ranked.
+ */
+export const notFoundLog = pgTable(
+  "not_found_log",
+  {
+    id: serial("id").primaryKey(),
+    path: varchar("path", { length: 500 }).notNull(),
+    referrer: text("referrer"),
+    userAgent: varchar("user_agent", { length: 300 }),
+    hits: integer("hits").notNull().default(1),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [uniqueIndex("not_found_log_path_unique").on(table.path)],
 );
 
 /* ---------------------------------- alerts -------------------------------- */

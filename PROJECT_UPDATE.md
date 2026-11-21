@@ -1,7 +1,7 @@
 # PROJECT_UPDATE.md
 Human-readable status of **junaedhossain.com + admin panel**. Update at every phase end and major event.
 
-**Last updated:** 2026-11-21 · **Overall progress:** 5.6 / 10 phases
+**Last updated:** 2026-11-21 · **Overall progress:** 6.6 / 10 phases
 
 ## Phase Status
 | # | Phase | Status | Started | Completed | Log |
@@ -12,7 +12,7 @@ Human-readable status of **junaedhossain.com + admin panel**. Update at every ph
 | 3 | CMS Core (Pages, Settings, Media) | ✅ Complete (media on local disk; R2 is an env swap) | 2026-11-21 | 2026-11-21 | [phase-03](logs/phase-03-log.md) |
 | 4 | Blog & Portfolio | ✅ Complete (verified end-to-end) | 2026-11-21 | 2026-11-21 | [phase-04](logs/phase-04-log.md) |
 | 5 | Contact, Leads, Notifications | ✅ Complete (notifications dormant until keys supplied) | 2026-11-21 | 2026-11-21 | [phase-05](logs/phase-05-log.md) |
-| 6 | On-Page SEO | ⬜ | | | |
+| 6 | On-Page SEO | ✅ Complete (verified end-to-end) | 2026-11-21 | 2026-11-21 | [phase-06](logs/phase-06-log.md) |
 | 7 | Analytics, Tracking, Dashboard | ⬜ | | | |
 | 8 | Security, IP Block, Logs, Staff | ⬜ | | | |
 | 9 | Backups, CI/CD, QA, Launch | ⬜ | | | |
@@ -25,6 +25,16 @@ Legend: ⬜ not started · 🟨 in progress · ✅ complete · ⛔ blocked
 - Repo: not created · Vercel project: not created
 
 ## Changelog (newest first)
+- 2026-11-21 — **Phase 6 complete.** Every public page now emits database-driven metadata
+  and JSON-LD (Person, WebSite, ProfessionalService, Service, BlogPosting, ContactPage,
+  BreadcrumbList). sitemap.xml, robots.txt and rss.xml are dynamic and read the database.
+  Dynamic OG images per post via `next/og`. Security headers added: CSP, X-Frame-Options,
+  Referrer-Policy, Permissions-Policy, nosniff, and HSTS in production only. Admin → SEO
+  gained a redirect manager and a 404 log where a broken URL becomes a redirect in one
+  click, plus a live SERP preview and 0–100 on-page score in the post editor. Three real
+  bugs fixed during verification: titles rendering twice, the OG handler receiving no
+  params, and a redirect code the framework cannot emit. lint/typecheck/178 tests/build
+  all pass.
 - 2026-11-21 — **Phase 5 complete.** The contact form is a working pipeline: honeypot,
   minimum fill time, signed stateless maths captcha (D-032), rate limit, and a spam
   scorer that accepts silently rather than teaching bots which signal fired (D-033).

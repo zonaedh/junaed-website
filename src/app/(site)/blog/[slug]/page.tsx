@@ -10,7 +10,10 @@ import {
   getPublishedPost,
   listPublishedPosts,
 } from "@/lib/posts/repository";
-import { site } from "@/lib/site";
+import { buildMetadata } from "@/lib/seo/metadata";
+import { getSeoDefaults } from "@/lib/seo/repository";
+import { articleSchema, breadcrumbList } from "@/lib/seo/core";
+import { JsonLd } from "@/components/seo/json-ld";
 
 type Params = { slug: string };
 
@@ -29,32 +32,21 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPublishedPost(slug);
-  if (!post) return { title: "Post not found" };
+  if (!post) return { title: "Post not found", robots: { index: false, follow: false } };
 
-  const title = post.seoTitle || post.title;
-  const description = post.seoDescription || post.excerpt;
-
-  return {
-    title,
-    description,
-    alternates: { canonical: post.canonicalUrl || `/blog/${post.slug}` },
-    robots: post.noindex ? { index: false, follow: false } : undefined,
-    openGraph: {
-      title,
-      description,
-      url: `/blog/${post.slug}`,
-      type: "article",
-      publishedTime: post.publishedAt ?? undefined,
-      authors: post.authorName ? [post.authorName] : [site.name],
-      images: post.coverUrl ? [{ url: post.coverUrl, alt: post.coverAlt }] : undefined,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: post.coverUrl ? [post.coverUrl] : undefined,
-    },
-  };
+  return buildMetadata({
+    title: post.seoTitle || post.title,
+    description: post.seoDescription || post.excerpt,
+    path: post.canonicalUrl || `/blog/${post.slug}`,
+    image: post.coverUrl ?? undefined,
+    imageAlt: post.coverAlt || post.title,
+    noindex: post.noindex,
+    type: "article",
+    publishedTime: post.publishedAt ?? undefined,
+    modifiedTime: post.updatedAt,
+    authors: post.authorName ? [post.authorName] : undefined,
+    titleTemplate: "%s",
+  });
 }
 
 export default async function PostPage({
@@ -68,9 +60,37 @@ export default async function PostPage({
 
   const all = await listPublishedPosts();
   const related = all.filter((item) => item.slug !== post.slug).slice(0, 2);
+  const seo = await getSeoDefaults();
+  const postUrl = `${seo.siteUrl.replace(/\/+$/, "")}/blog/${post.slug}`;
 
   return (
     <>
+      <JsonLd
+        nodes={[
+          articleSchema({
+            type: "BlogPosting",
+            headline: post.seoTitle || post.title,
+            description: post.seoDescription || post.excerpt,
+            url: postUrl,
+            image: post.coverUrl ?? undefined,
+            datePublished: post.publishedAt ?? undefined,
+            dateModified: post.updatedAt,
+            authorName: post.authorName ?? seo.siteName,
+            authorUrl: seo.siteUrl,
+            publisherName: seo.siteName,
+            publisherUrl: seo.siteUrl,
+            wordCount: post.wordCount || undefined,
+          }),
+          breadcrumbList(
+            [
+              { name: "Home", path: "/" },
+              { name: "Blog", path: "/blog" },
+              { name: post.title, path: `/blog/${post.slug}` },
+            ],
+            seo.siteUrl,
+          ),
+        ]}
+      />
       <article>
         <header className="pt-10 pb-8 lg:pt-16 lg:pb-10">
           <div className="wrap max-w-[760px]">

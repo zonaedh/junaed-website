@@ -5,13 +5,19 @@ import { ContactForm } from "@/components/site/contact-form";
 import { getPageContent } from "@/lib/pages";
 import { getSettings } from "@/lib/settings";
 import { createChallenge } from "@/lib/contact/captcha";
+import { buildMetadata } from "@/lib/seo/metadata";
+import { getSeoDefaults } from "@/lib/seo/repository";
+import { breadcrumbList, contactPageSchema } from "@/lib/seo/core";
+import { JsonLd } from "@/components/seo/json-ld";
 
-export const metadata: Metadata = {
-  title: "Contact",
-  description:
-    "Tell me about your project. Digital marketing, SEO, design and WordPress work for growing brands.",
-  alternates: { canonical: "/contact" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildMetadata({
+    title: "Contact",
+    description:
+      "Tell me about your project. Digital marketing, SEO, design and WordPress work for growing brands.",
+    path: "/contact",
+  });
+}
 
 export default async function ContactPage() {
   const [content, settings] = await Promise.all([
@@ -21,8 +27,29 @@ export default async function ContactPage() {
   // The captcha challenge is generated on the server so the answer never
   // reaches the client in a readable form.
   const challenge = createChallenge();
+  const seo = await getSeoDefaults();
+
   return (
-    <section className="bg-surface py-14 lg:py-[75px]">
+    <>
+      <JsonLd
+        nodes={[
+          contactPageSchema({
+            name: `Contact ${seo.siteName}`,
+            url: `${seo.siteUrl.replace(/\/+$/, "")}/contact`,
+            description: seo.defaultDescription,
+            email: seo.contactEmail || undefined,
+            telephone: seo.contactPhone || undefined,
+          }),
+          breadcrumbList(
+            [
+              { name: "Home", path: "/" },
+              { name: "Contact", path: "/contact" },
+            ],
+            seo.siteUrl,
+          ),
+        ]}
+      />
+      <section className="bg-surface py-14 lg:py-[75px]">
       <div className="wrap grid gap-10 lg:grid-cols-2 lg:gap-[50px]">
         <Reveal>
           <Eyebrow>{content.eyebrow}</Eyebrow>
@@ -78,6 +105,7 @@ export default async function ContactPage() {
           />
         </Reveal>
       </div>
-    </section>
+      </section>
+    </>
   );
 }

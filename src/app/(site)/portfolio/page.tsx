@@ -5,13 +5,19 @@ import { ButtonLink } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Reveal } from "@/components/ui/reveal";
 import { listPublishedPortfolio } from "@/lib/portfolio/repository";
+import { buildMetadata } from "@/lib/seo/metadata";
+import { getSeoDefaults } from "@/lib/seo/repository";
+import { breadcrumbList } from "@/lib/seo/core";
+import { JsonLd } from "@/components/seo/json-ld";
 
-export const metadata: Metadata = {
-  title: "Portfolio",
-  description:
-    "Selected digital marketing, SEO, design and WordPress work. Case studies with the problem, the approach and what changed.",
-  alternates: { canonical: "/portfolio" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildMetadata({
+    title: "Portfolio",
+    description:
+      "Selected digital marketing, SEO, design and WordPress work. Case studies with the problem, the approach and what changed.",
+    path: "/portfolio",
+  });
+}
 
 /**
  * Public portfolio index (MVP.md §4.2).
@@ -22,9 +28,19 @@ export const metadata: Metadata = {
  */
 export default async function PortfolioPage() {
   const projects = await listPublishedPortfolio();
+  const seo = await getSeoDefaults();
 
   return (
     <>
+      <JsonLd
+        nodes={breadcrumbList(
+          [
+            { name: "Home", path: "/" },
+            { name: "Portfolio", path: "/portfolio" },
+          ],
+          seo.siteUrl,
+        )}
+      />
       <section className="pt-10 pb-12 lg:pt-16 lg:pb-14">
         <div className="wrap">
           <Reveal>

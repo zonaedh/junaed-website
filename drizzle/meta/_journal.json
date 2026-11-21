@@ -8,6 +8,20 @@
       "when": 1795197057858,
       "tag": "0000_late_saracen",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795210024135,
+      "tag": "0001_spicy_logan",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795210301458,
+      "tag": "0002_fat_apocalypse",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,10 @@ import {
   getPublishedPortfolioItem,
   listPublishedPortfolio,
 } from "@/lib/portfolio/repository";
+import { buildMetadata } from "@/lib/seo/metadata";
+import { getSeoDefaults } from "@/lib/seo/repository";
+import { articleSchema, breadcrumbList } from "@/lib/seo/core";
+import { JsonLd } from "@/components/seo/json-ld";
 
 type Params = { slug: string };
 
@@ -20,32 +24,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const project = await getPublishedPortfolioItem(slug);
-  if (!project) return { title: "Project not found" };
+  if (!project)
+    return { title: "Project not found", robots: { index: false, follow: false } };
 
-  const title = project.seoTitle || project.title;
-  const description = project.seoDescription || project.summary;
-
-  return {
-    title,
-    description,
-    alternates: { canonical: `/portfolio/${project.slug}` },
-    robots: project.noindex ? { index: false, follow: false } : undefined,
-    openGraph: {
-      title,
-      description,
-      url: `/portfolio/${project.slug}`,
-      type: "article",
-      images: project.coverUrl
-        ? [{ url: project.coverUrl, alt: project.coverAlt }]
-        : undefined,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: project.coverUrl ? [project.coverUrl] : undefined,
-    },
-  };
+  return buildMetadata({
+    title: project.seoTitle || project.title,
+    description: project.seoDescription || project.summary,
+    path: `/portfolio/${project.slug}`,
+    image: project.coverUrl ?? undefined,
+    imageAlt: project.coverAlt || project.title,
+    noindex: project.noindex,
+    type: "article",
+    titleTemplate: "%s",
+  });
 }
 
 /**
@@ -65,9 +56,33 @@ export default async function ProjectPage({
 
   const all = await listPublishedPortfolio();
   const others = all.filter((item) => item.slug !== project.slug).slice(0, 2);
+  const seo = await getSeoDefaults();
 
   return (
     <>
+      <JsonLd
+        nodes={[
+          articleSchema({
+            type: "CreativeWork" as "Article",
+            headline: project.seoTitle || project.title,
+            description: project.seoDescription || project.summary,
+            url: `${seo.siteUrl.replace(/\/+$/, "")}/portfolio/${project.slug}`,
+            image: project.coverUrl ?? undefined,
+            authorName: seo.siteName,
+            authorUrl: seo.siteUrl,
+            publisherName: seo.siteName,
+            publisherUrl: seo.siteUrl,
+          }),
+          breadcrumbList(
+            [
+              { name: "Home", path: "/" },
+              { name: "Portfolio", path: "/portfolio" },
+              { name: project.title, path: `/portfolio/${project.slug}` },
+            ],
+            seo.siteUrl,
+          ),
+        ]}
+      />
       <section className="pt-10 pb-10 lg:pt-16 lg:pb-12">
         <div className="wrap">
           <Reveal>

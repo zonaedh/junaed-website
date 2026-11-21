@@ -6,13 +6,19 @@ import { Reveal } from "@/components/ui/reveal";
 import { SectionHead } from "@/components/ui/section-head";
 import { getPageContent } from "@/lib/pages";
 import { resolveMediaAsset } from "@/lib/media/repository";
+import { buildMetadata } from "@/lib/seo/metadata";
+import { getSeoDefaults } from "@/lib/seo/repository";
+import { breadcrumbList, personSchema } from "@/lib/seo/core";
+import { JsonLd } from "@/components/seo/json-ld";
 
-export const metadata: Metadata = {
-  title: "About",
-  description:
-    "Junaed Hossain is a digital marketer and creative problem-solver working across strategy, SEO, design and WordPress for growing brands.",
-  alternates: { canonical: "/about" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildMetadata({
+    title: "About",
+    description:
+      "Junaed Hossain is a digital marketer and creative problem-solver working across strategy, SEO, design and WordPress for growing brands.",
+    path: "/about",
+  });
+}
 
 const principles = [
   {
@@ -43,9 +49,29 @@ const capabilities = [
 export default async function AboutPage() {
   const content = await getPageContent("about");
   const aboutImage = await resolveMediaAsset(Number(content.image) || null);
+  const seo = await getSeoDefaults();
 
   return (
     <>
+      <JsonLd
+        nodes={[
+          personSchema({
+            name: seo.siteName,
+            url: seo.siteUrl,
+            jobTitle: "Digital Marketing Consultant",
+            description: seo.siteDescription,
+            email: seo.contactEmail || undefined,
+            sameAs: seo.socialLinks,
+          }),
+          breadcrumbList(
+            [
+              { name: "Home", path: "/" },
+              { name: "About", path: "/about" },
+            ],
+            seo.siteUrl,
+          ),
+        ]}
+      />
       <section className="pt-10 pb-12 lg:pt-16 lg:pb-16">
         <div className="wrap grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
           <Reveal>

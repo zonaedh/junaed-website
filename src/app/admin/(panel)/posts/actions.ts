@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
@@ -24,7 +24,7 @@ import {
 import { slugTaken } from "@/lib/posts/repository";
 
 /**
- * Post write path (MVP.md §4.1).
+ * Post write path (MVP.md Â§4.1).
  *
  * Notes on the choices here:
  *
@@ -157,6 +157,7 @@ export async function savePost(
   const seoTitle = String(formData.get("seoTitle") ?? "").trim();
   const seoDescription = String(formData.get("seoDescription") ?? "").trim();
   const canonicalUrl = String(formData.get("canonicalUrl") ?? "").trim();
+  const focusKeyword = String(formData.get("focusKeyword") ?? "").trim();
   if (seoTitle.length > MAX_SEO_TITLE) {
     errors.seoTitle = `SEO title must be ${MAX_SEO_TITLE} characters or fewer.`;
   }
@@ -235,6 +236,7 @@ export async function savePost(
           seoTitle: seoTitle || null,
           seoDescription: seoDescription || null,
           canonicalUrl: canonicalUrl || null,
+    focusKeyword: focusKeyword || null,
           noindex,
         })
         .returning({ id: postsTable.id });
@@ -309,12 +311,13 @@ export async function savePost(
         seoTitle: seoTitle || null,
         seoDescription: seoDescription || null,
         canonicalUrl: canonicalUrl || null,
+    focusKeyword: focusKeyword || null,
         noindex,
         updatedAt: new Date(),
       })
       .where(eq(postsTable.id, postId));
 
-    // Replace the tag set wholesale — simplest correct behaviour.
+    // Replace the tag set wholesale â€” simplest correct behaviour.
     await db.delete(postTags).where(eq(postTags.postId, postId));
     const tagIds = await resolveTags(tagNames);
     if (tagIds.length > 0) {
@@ -385,7 +388,7 @@ export async function setPostStatus(
   redirect(`${await getAdminBase()}/posts`);
 }
 
-/** Soft delete — the Trash keeps it for 30 days (MVP.md §4.2). */
+/** Soft delete â€” the Trash keeps it for 30 days (MVP.md Â§4.2). */
 export async function deletePost(postId: number): Promise<void> {
   const user = await requireRoleOrThrow("editor");
 

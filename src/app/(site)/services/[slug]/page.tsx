@@ -5,6 +5,10 @@ import { ArrowUpRight, ButtonLink } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Reveal } from "@/components/ui/reveal";
 import { getService, services } from "@/lib/content";
+import { buildMetadata } from "@/lib/seo/metadata";
+import { getSeoDefaults } from "@/lib/seo/repository";
+import { breadcrumbList, serviceSchema } from "@/lib/seo/core";
+import { JsonLd } from "@/components/seo/json-ld";
 
 type Params = { slug: string };
 
@@ -19,19 +23,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const service = getService(slug);
-  if (!service) return { title: "Service not found" };
+  if (!service)
+    return { title: "Service not found", robots: { index: false, follow: false } };
 
-  return {
+  return buildMetadata({
     title: service.title,
     description: service.summary,
-    alternates: { canonical: `/services/${service.slug}` },
-    openGraph: {
-      title: `${service.title} — Junaed Hossain`,
-      description: service.summary,
-      url: `/services/${service.slug}`,
-      type: "website",
-    },
-  };
+    path: `/services/${service.slug}`,
+  });
 }
 
 export default async function ServicePage({
@@ -44,9 +43,29 @@ export default async function ServicePage({
   if (!service) notFound();
 
   const others = services.filter((item) => item.slug !== service.slug);
+  const seo = await getSeoDefaults();
 
   return (
     <>
+      <JsonLd
+        nodes={[
+          serviceSchema({
+            name: service.title,
+            description: service.summary,
+            url: `${seo.siteUrl.replace(/\/+$/, "")}/services/${service.slug}`,
+            providerName: seo.siteName,
+            providerUrl: seo.siteUrl,
+          }),
+          breadcrumbList(
+            [
+              { name: "Home", path: "/" },
+              { name: "Services", path: "/services" },
+              { name: service.title, path: `/services/${service.slug}` },
+            ],
+            seo.siteUrl,
+          ),
+        ]}
+      />
       <section className="pt-10 pb-12 lg:pt-16 lg:pb-14">
         <div className="wrap">
           <Reveal>

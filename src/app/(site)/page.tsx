@@ -1,4 +1,5 @@
-﻿import Link from "next/link";
+import Link from "next/link";
+import type { Metadata } from "next";
 import Image from "next/image";
 import { ArrowUpRight, ButtonLink } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
@@ -10,6 +11,14 @@ import { projects, services } from "@/lib/content";
 import { getPageContent } from "@/lib/pages";
 import { resolveMediaAsset } from "@/lib/media/repository";
 import { listFeaturedPortfolio } from "@/lib/portfolio/repository";
+import { buildMetadata } from "@/lib/seo/metadata";
+import { getSeoDefaults } from "@/lib/seo/repository";
+import {
+  personSchema,
+  professionalServiceSchema,
+  websiteSchema,
+} from "@/lib/seo/core";
+import { JsonLd } from "@/components/seo/json-ld";
 
 /**
  * Hero visual.
@@ -75,8 +84,22 @@ function HeroVisual({ imageUrl, imageAlt }: { imageUrl: string | null; imageAlt:
   );
 }
 
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await getPageContent("home");
+  return buildMetadata({
+    title: content.heroHeading || "Digital Growth & Creative Solutions",
+    description: content.heroSubheading,
+    path: "/",
+    image: content.heroImage ? undefined : undefined,
+    // The home page is the brand itself, so it keeps the site name in the
+    // title rather than dropping it the way an inner page would.
+    titleTemplate: "%s | Junaed Hossain",
+  });
+}
+
 export default async function HomePage() {
   const content = await getPageContent("home");
+  const seo = await getSeoDefaults();
 
   // Portfolio comes from the database once anything is published; the static
   // placeholders remain as the fallback so a fresh database still renders.
@@ -91,6 +114,32 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd
+        nodes={[
+          personSchema({
+            name: seo.siteName,
+            url: seo.siteUrl,
+            jobTitle: "Digital Marketing Consultant",
+            description: seo.siteDescription,
+            email: seo.contactEmail || undefined,
+            sameAs: seo.socialLinks,
+          }),
+          websiteSchema({
+            name: seo.siteName,
+            url: seo.siteUrl,
+            description: seo.defaultDescription,
+            publisherName: seo.siteName,
+          }),
+          professionalServiceSchema({
+            name: seo.siteName,
+            url: seo.siteUrl,
+            description: seo.siteDescription,
+            email: seo.contactEmail || undefined,
+            telephone: seo.contactPhone || undefined,
+            services: services.map((service) => service.title),
+          }),
+        ]}
+      />
       {/* ---------------- Hero ---------------- */}
       <section className="pt-9 pb-14 lg:pt-12 lg:pb-[78px]">
         <div className="wrap grid items-center gap-9 lg:grid-cols-[1.05fr_0.95fr] lg:gap-[60px]">

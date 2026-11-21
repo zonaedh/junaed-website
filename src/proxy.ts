@@ -51,7 +51,6 @@ export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const host = request.headers.get("host");
   const adminHost = isAdminHost(host);
-
   if (adminHost) {
     // robots.txt for the admin host: disallow everything.
     if (pathname === "/robots.txt") {

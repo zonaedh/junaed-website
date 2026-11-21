@@ -260,6 +260,7 @@ export type EditablePost = {
   seoTitle: string;
   seoDescription: string;
   canonicalUrl: string;
+  focusKeyword: string;
   noindex: boolean;
 };
 
@@ -295,6 +296,7 @@ export async function getPostForEdit(id: number): Promise<EditablePost | null> {
     seoTitle: row.seoTitle ?? "",
     seoDescription: row.seoDescription ?? "",
     canonicalUrl: row.canonicalUrl ?? "",
+    focusKeyword: row.focusKeyword ?? "",
     noindex: row.noindex,
   };
 }

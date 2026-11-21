@@ -5,17 +5,34 @@ import { Reveal } from "@/components/ui/reveal";
 import { SectionHead } from "@/components/ui/section-head";
 import { ServiceCard } from "@/components/site/service-card";
 import { services } from "@/lib/content";
+import { buildMetadata } from "@/lib/seo/metadata";
+import { getSeoDefaults } from "@/lib/seo/repository";
+import { breadcrumbList } from "@/lib/seo/core";
+import { JsonLd } from "@/components/seo/json-ld";
 
-export const metadata: Metadata = {
-  title: "Services",
-  description:
-    "Digital marketing, SEO, graphic design and WordPress customization for growing brands. Clear scope, honest timelines, work that compounds.",
-  alternates: { canonical: "/services" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildMetadata({
+    title: "Services",
+    description:
+      "Digital marketing, SEO, graphic design and WordPress customization for growing brands. Clear scope, honest timelines, work that compounds.",
+    path: "/services",
+  });
+}
 
-export default function ServicesPage() {
+export default async function ServicesPage() {
+  const seo = await getSeoDefaults();
+
   return (
     <>
+      <JsonLd
+        nodes={breadcrumbList(
+          [
+            { name: "Home", path: "/" },
+            { name: "Services", path: "/services" },
+          ],
+          seo.siteUrl,
+        )}
+      />
       <section className="pt-10 pb-12 lg:pt-16 lg:pb-16">
         <div className="wrap">
           <Reveal>

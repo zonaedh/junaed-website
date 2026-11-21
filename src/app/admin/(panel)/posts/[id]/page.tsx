@@ -8,6 +8,8 @@ import {
   listCategories,
 } from "@/lib/posts/repository";
 import { listMediaForAdmin } from "@/lib/media/repository";
+import { analyseDoc, docToPlainText } from "@/lib/posts/content";
+import { getSeoDefaults } from "@/lib/seo/repository";
 import { PostForm } from "../post-form";
 
 export const metadata: Metadata = { title: "Edit post" };
@@ -27,13 +29,15 @@ export default async function EditPostPage({
   const postId = Number(id);
   if (!Number.isFinite(postId)) notFound();
 
-  const [post, categories, media] = await Promise.all([
+  const [post, categories, media, seo] = await Promise.all([
     getPostForEdit(postId),
     listCategories(),
     listMediaForAdmin({ type: "image" }),
+    getSeoDefaults(),
   ]);
 
   if (!post) notFound();
+  const seoHost = seo.siteUrl.replace(/^https?:\/\//, "").replace(/\/+$/, "");
 
   return (
     <div className="mx-auto max-w-[1180px]">
@@ -60,6 +64,10 @@ export default async function EditPostPage({
         categories={categories}
         media={media}
         adminBase={base}
+        bodyText={docToPlainText(post.content)}
+        imageAlts={analyseDoc(post.content).imageAlts}
+        internalLinks={analyseDoc(post.content).internalLinks}
+        siteHost={seoHost}
       />
     </div>
   );
