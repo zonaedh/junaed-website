@@ -1,45 +1,45 @@
-# DECISIONS.md
+﻿# DECISIONS.md
 Short decision records. Don't re-debate "Accepted" items without the user's approval.
-Format: **ID · Title · Status · Date** → Decision → Why → Trade-off.
+Format: **ID Â· Title Â· Status Â· Date** â†’ Decision â†’ Why â†’ Trade-off.
 
 ---
 
-**D-001 · Hosting on Vercel, Namecheap only for backups · Accepted**
+**D-001 Â· Hosting on Vercel, Namecheap only for backups Â· Accepted**
 Decision: Run Next.js + admin on Vercel Hobby. Namecheap cPanel stores encrypted backups via SFTP.
 Why: Namecheap shared hosting cannot run server-side Next.js. Trade-off: Hobby tier is non-commercial; 10s function limit.
 
-**D-002 · Single Next.js app, host-based routing · Accepted**
+**D-002 Â· Single Next.js app, host-based routing Â· Accepted**
 Decision: One repo/app; proxy routes `admin.` host to `(admin)` and root to `(site)`.
-Why: Shared code, one deploy. Trade-off: shared blast radius → strict proxy + tests.
+Why: Shared code, one deploy. Trade-off: shared blast radius â†’ strict proxy + tests.
 
-**D-003 · Neon Postgres + Drizzle · Accepted**
+**D-003 Â· Neon Postgres + Drizzle Â· Accepted**
 Why: Serverless-friendly; Namecheap MySQL not reliably reachable from Vercel.
 
-**D-004 · Cloudflare R2 for media · Accepted**
+**D-004 Â· Cloudflare R2 for media Â· Accepted**
 Why: Vercel filesystem is ephemeral. 10 GB free, S3-compatible.
 
-**D-005 · Custom auth (Argon2id + sessions + TOTP) · Accepted**
+**D-005 Â· Custom auth (Argon2id + sessions + TOTP) Â· Accepted**
 Why: Full server-side control, no tokens in browser storage.
 
-**D-006 · Upstash Redis for rate limiting/IP block cache · Accepted**
+**D-006 Â· Upstash Redis for rate limiting/IP block cache Â· Accepted**
 
-**D-007 · Resend + React Email · Accepted** (user requirement)
+**D-007 Â· Resend + React Email Â· Accepted** (user requirement)
 
-**D-008 · Tiptap editor for posts/pages · Accepted**
+**D-008 Â· Tiptap editor for posts/pages Â· Accepted**
 
-**D-009 · First-party analytics + optional GA4 Data API · Accepted**
+**D-009 Â· First-party analytics + optional GA4 Data API Â· Accepted**
 
-**D-010 · Math captcha (signed token) + honeypot + time check · Accepted** (user requirement)
+**D-010 Â· Math captcha (signed token) + honeypot + time check Â· Accepted** (user requirement)
 
-**D-011 · Backup: weekly via GitHub Actions, keep last 3, hard-delete older, encrypted · Accepted (pending user confirmation of schedule)**
+**D-011 Â· Backup: weekly via GitHub Actions, keep last 3, hard-delete older, encrypted Â· Accepted (pending user confirmation of schedule)**
 
-**D-012 · Admin never indexed: header + meta + robots + no sitemap · Accepted**
+**D-012 Â· Admin never indexed: header + meta + robots + no sitemap Â· Accepted**
 Implemented in Phase 1 as `src/proxy.ts`: every admin-host response carries
 `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet`, the admin host serves
 `Disallow: /` robots.txt, admin routes are absent from the public sitemap, and
 `/admin*` returns 404 on the public host. Verified with curl (see phase-01 log).
 
-**D-013 · Next.js 16.4 + Tailwind v4; Cache Components disabled · Accepted · 2026-11-20**
+**D-013 Â· Next.js 16.4 + Tailwind v4; Cache Components disabled Â· Accepted Â· 2026-11-20**
 Decision: `create-next-app` installed Next.js 16.4.6 with Tailwind v4 and enabled
 `cacheComponents` + `partialPrefetching` by default. Both flags are turned **off**
 in `next.config.ts`.
@@ -50,27 +50,27 @@ now would add a large class of prerender errors for zero benefit.
 Trade-off: We do not get partial prerendering yet. Revisit in Phase 7 when the
 dashboard exists and we know which shells are worth caching.
 
-**D-014 · Middleware is now `proxy.ts` (Next.js 16 rename) · Accepted · 2026-11-20**
+**D-014 Â· Middleware is now `proxy.ts` (Next.js 16 rename) Â· Accepted Â· 2026-11-20**
 Decision: Host routing and admin headers live in `src/proxy.ts` exporting
 `proxy()`, not `middleware.ts`.
 Why: Next.js 16 renamed Middleware to Proxy; `middleware.ts` is the legacy name.
 Trade-off: Any older tutorial or snippet using `middleware.ts` will not apply.
 
-**D-015 · Vitest 5 for unit tests · Accepted · 2026-11-20**
+**D-015 Â· Vitest 5 for unit tests Â· Accepted Â· 2026-11-20**
 Decision: `vitest@5` + `vite` as dev dependencies, config at `vitest.config.mts`.
 Why: `vitest@3` pulled `tinypool` with two critical advisories (prototype
-pollution → RCE). `npm audit` is clean at vitest 5.
+pollution â†’ RCE). `npm audit` is clean at vitest 5.
 Trade-off: Installed with `--legacy-peer-deps` because of a peer-range conflict;
 `vite` is declared explicitly so the runner resolves. Revisit when vitest ships
 peer ranges matching our toolchain.
 
-**D-016 · Zod for all server-side validation · Accepted · 2026-11-20**
+**D-016 Â· Zod for all server-side validation Â· Accepted Â· 2026-11-20**
 Decision: `zod@4` schemas in `src/lib/validation/*`, parsed on the server in
 every Server Action. Client-side checks are convenience only.
-Why: AGENT_GUIDE §5 requires server-side validation of all input; one schema
+Why: AGENT_GUIDE Â§5 requires server-side validation of all input; one schema
 shared by both sides avoids drift.
 
-**D-017 · Contact form is validation-only until Phase 5 · Accepted · 2026-11-20**
+**D-017 Â· Contact form is validation-only until Phase 5 Â· Accepted Â· 2026-11-20**
 Decision: `submitContact` validates, checks the honeypot and enforces a 3s
 minimum fill time, then logs to the server console. It does **not** persist,
 email, or notify anyone yet, and the UI says "received", not "sent".
@@ -83,7 +83,7 @@ in HANDOFF.md as a launch blocker.
 
 ---
 
-## D-018 — Database client is lazily initialised
+## D-018 â€” Database client is lazily initialised
 
 **Date:** 2026-11-20
 **Status:** Accepted
@@ -97,12 +97,12 @@ preview deploys would both have failed.
 is exported for scripts (seed, migrations). Importing `@/db` has no side effects.
 
 **Consequences.** Builds never need a database. A missing `DATABASE_URL` now surfaces on
-the first query instead of at import, so callers must handle it — the login action does
+the first query instead of at import, so callers must handle it â€” the login action does
 (see D-021). Never reintroduce top-level connection code.
 
 ---
 
-## D-019 — Pure logic is split from database-touching code
+## D-019 â€” Pure logic is split from database-touching code
 
 **Date:** 2026-11-20
 **Status:** Accepted
@@ -120,13 +120,13 @@ This is the pattern for any new module that mixes policy with persistence.
 
 ---
 
-## D-020 — `/admin` is reachable on loopback only
+## D-020 â€” `/admin` is reachable on loopback only
 
 **Date:** 2026-11-20
 **Status:** Accepted
 
 **Context.** The proxy 404s `/admin` on any non-admin host. Locally there is no admin
-subdomain, so the admin panel could not be opened at all — the whole phase was
+subdomain, so the admin panel could not be opened at all â€” the whole phase was
 unverifiable in a browser.
 
 **Decision.** Loopback hosts (`localhost`, `127.0.0.1`, `::1`) pass `/admin` through,
@@ -138,7 +138,7 @@ carries the real domain in the Host header.
 
 ---
 
-## D-021 — Login errors are generic except for lockout and infrastructure
+## D-021 â€” Login errors are generic except for lockout and infrastructure
 
 **Date:** 2026-11-20
 **Status:** Accepted
@@ -158,7 +158,7 @@ the same shape.
 
 ---
 
-## D-022 — Local dev database is PGlite behind the real `pg` driver
+## D-022 â€” Local dev database is PGlite behind the real `pg` driver
 
 **Date:** 2026-11-20
 **Status:** Accepted
@@ -171,7 +171,7 @@ yet. Building Phase 3 blind would have produced unverifiable work.
 **Decision.** `scripts/db-local.ts` runs PGlite (PostgreSQL compiled to WebAssembly)
 and exposes it over the Postgres wire protocol on `127.0.0.1:5433`. Application code
 connects with the ordinary `pg` driver, so `src/db/index.ts`, Drizzle, the schema
-and every query are identical to production. Production still uses Neon — only the
+and every query are identical to production. Production still uses Neon â€” only the
 connection string differs.
 
 **Why `pg` and not `postgres`.** Both work against Neon. Only `pg` sends enum
@@ -180,10 +180,10 @@ parameters correctly through PGlite's socket layer: the `postgres` driver produc
 driver everywhere means local and production run the same code path.
 
 **Rejected alternatives.**
-- *Embedded Postgres binaries* — the bundled Windows `initdb` crashes with an access
+- *Embedded Postgres binaries* â€” the bundled Windows `initdb` crashes with an access
   violation in this environment, with and without spaces in the path.
-- *Docker* — not installed.
-- *Writing Phase 3 against the schema without a DB* — no way to prove the loop.
+- *Docker* â€” not installed.
+- *Writing Phase 3 against the schema without a DB* â€” no way to prove the loop.
 
 **Consequences.** The full schema has now been migrated and seeded against a real
 Postgres for the first time, and login + 2FA are proven end to end. PGlite is
@@ -193,7 +193,7 @@ It is a dev dependency and is never imported by application code. Data lives in
 
 ---
 
-## D-023 — Login redirects are host-aware
+## D-023 â€” Login redirects are host-aware
 
 **Date:** 2026-11-20
 **Status:** Accepted
@@ -212,7 +212,7 @@ should move into a shared helper.
 
 ---
 
-## D-024 — Admin links and redirects are host-aware
+## D-024 â€” Admin links and redirects are host-aware
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -220,7 +220,7 @@ should move into a shared helper.
 **Context.** Every admin nav link and every `requireRole()` redirect was
 root-absolute (`/settings`, `/login`, `/dashboard`). That is correct on the
 admin host, where the proxy rewrites those paths into the admin tree. On loopback
-there is no rewrite, so the entire panel 404'd the moment you clicked anything —
+there is no rewrite, so the entire panel 404'd the moment you clicked anything â€”
 including the sidebar, which made the Phase 3 editors unreachable locally.
 
 **Decision.** `src/lib/admin-path.ts` exposes `getAdminBase()`, which returns
@@ -237,7 +237,7 @@ sound because the only way to reach an admin route on loopback is through the
 
 ---
 
-## D-025 — Settings and page content are registry-driven
+## D-025 â€” Settings and page content are registry-driven
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -249,7 +249,7 @@ and the public site falls back to a default with no error anywhere.
 **Decision.** Every setting and every page field is declared once in a registry
 (`settings-registry.ts`, `pages-definitions.ts`) with its type, label,
 default and max length. The admin form is generated from the registry, validation
-loops over it, and the public reader resolves stored JSONB against it — coercing
+loops over it, and the public reader resolves stored JSONB against it â€” coercing
 each value and falling back to the documented default when a row is missing or
 malformed.
 
@@ -262,11 +262,11 @@ same split that `role-hierarchy.ts` already uses.
 **Consequences.** Adding a setting or a page field is one entry, not four
 coordinated edits. A missing row renders the default instead of `undefined`. A
 page saved as `draft` renders its defaults publicly, so an editor cannot leak
-work in progress by accident — verified in the browser.
+work in progress by accident â€” verified in the browser.
 
 ---
 
-## D-026 — Revalidation uses `{ expire: 0 }`, not `"max"`
+## D-026 â€” Revalidation uses `{ expire: 0 }`, not `"max"`
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -279,14 +279,14 @@ background for up to a year.
 
 **Consequences.** The next request is a blocking revalidate, so the editor sees
 their change on the very next page load. `"max"` would have been faster under
-load but would have shown the old copy for an indeterminate window — unacceptable
+load but would have shown the old copy for an indeterminate window â€” unacceptable
 when the phase's definition of done is "see it live within seconds". Settings and
 pages are read rarely and change rarely; the blocking cost is irrelevant at this
 scale.
 
 ---
 
-## D-027 — Media storage is an adapter with a local and an R2 driver
+## D-027 â€” Media storage is an adapter with a local and an R2 driver
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -311,7 +311,7 @@ and bounds every key so a crafted filename cannot escape the uploads directory.
 
 ---
 
-## D-028 — Uploads are re-encoded, not stored as received
+## D-028 â€” Uploads are re-encoded, not stored as received
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -333,19 +333,19 @@ site reserve layout space and avoid a shift on load.
 
 ---
 
-## D-029 — A media row cannot be deleted while anything references it
+## D-029 â€” A media row cannot be deleted while anything references it
 
 **Date:** 2026-11-21
 **Status:** Accepted
 
 **Context.** Image fields store a media **id**. Deleting a row that a page still
-points at leaves that page rendering a gap, with no error anywhere — the same
+points at leaves that page rendering a gap, with no error anywhere â€” the same
 silent-rot failure D-025 exists to prevent, one layer down.
 
 **Decision.** `src/lib/media/usage.ts` scans every place an id can be referenced
 before a delete is permitted: page content fields declared as `image` in the
 registry, settings declared as `image`, post covers and OG images, and portfolio
-covers and OG images. The admin shows "Used in …" with links, and the delete
+covers and OG images. The admin shows "Used in â€¦" with links, and the delete
 control is replaced by that explanation when usage is non-empty.
 
 **Consequences.** Because the page scan is registry-driven, adding an image
@@ -355,7 +355,7 @@ common case.
 
 ---
 
-## D-030 — Blog and portfolio detail pages are dynamic; indexes are cached by tag
+## D-030 â€” Blog and portfolio detail pages are dynamic; indexes are cached by tag
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -377,7 +377,7 @@ view, which is the correct trade for a site at this scale and is the only way
 
 ---
 
-## D-031 — `unstable_cache` results are typed as serialised, not as the row
+## D-031 â€” `unstable_cache` results are typed as serialised, not as the row
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -396,14 +396,14 @@ display format belongs anyway. Any future cached query returning dates must
 follow the same rule.
 ---
 
-## D-032 — The contact captcha is a signed stateless token
+## D-032 â€” The contact captcha is a signed stateless token
 
 **Date:** 2026-11-21
 **Status:** Accepted
 
 **Context.** A maths captcha needs the server to know the right answer when the form
 comes back, but a contact form is the last place you want a session store or a table
-of pending challenges — it is anonymous, high-volume and disposable.
+of pending challenges â€” it is anonymous, high-volume and disposable.
 
 **Decision.** The challenge is rendered as `question + token`, where the token is an
 HMAC over the answer, a nonce and an expiry, signed with `CAPTCHA_SECRET`. The server
@@ -415,7 +415,7 @@ cannot be invalidated early, which is irrelevant for a 15-minute challenge. Rota
 
 ---
 
-## D-033 — Spam is scored and silently accepted, never rejected with a reason
+## D-033 â€” Spam is scored and silently accepted, never rejected with a reason
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -434,7 +434,7 @@ corrected without a deploy.
 
 ---
 
-## D-034 — Notification adapters are dormant drivers, not stubs
+## D-034 â€” Notification adapters are dormant drivers, not stubs
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -452,7 +452,7 @@ turn on with a key and a toggle, no code change. The cost is that the live provi
 path is unverified until someone supplies credentials.
 ---
 
-## D-035 — Redirects are enforced by a catch-all route, not the proxy
+## D-035 â€” Redirects are enforced by a catch-all route, not the proxy
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -467,12 +467,12 @@ in the Node runtime, can read the database, and still returns a real redirect st
 
 **Consequences.** Redirects cost one cached read on a miss, not on every request, because
 the catch-all only runs when no real route matched. The trade is that a redirect for a
-path that *does* exist as a page cannot be expressed — which is correct, since shadowing
+path that *does* exist as a page cannot be expressed â€” which is correct, since shadowing
 a live page with a redirect is a mistake, not a feature.
 
 ---
 
-## D-036 — Permanent redirects are stored and sent as 308, not 301
+## D-036 â€” Permanent redirects are stored and sent as 308, not 301
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -492,7 +492,7 @@ legacy crawlers, some CDN rules) cannot get one from this admin, and would need 
 
 ---
 
-## D-037 — The 404 log upserts on path so it ranks distinct URLs
+## D-037 â€” The 404 log upserts on path so it ranks distinct URLs
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -506,11 +506,11 @@ count.
 
 **Consequences.** The list answers the question the owner actually has: which URLs are
 broken, and which matter most. The trade is that per-visitor detail (referrer, user agent,
-time of each hit) is overwritten rather than accumulated — acceptable, because the action
+time of each hit) is overwritten rather than accumulated â€” acceptable, because the action
 this log exists to prompt is "create a redirect", not "investigate one visitor".
 ---
 
-## D-038 — Pure script rules live in their own module, not in the repository
+## D-038 â€” Pure script rules live in their own module, not in the repository
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -529,11 +529,11 @@ import either.
 **Consequences.** One more file, and a rule to remember: a helper that a client component
 needs must not sit beside database code. This is the same failure the project manual
 already warns about for `@/lib/rbac`, `@/db`, `@/lib/settings`, `@/lib/pages` and
-`@/lib/media/storage` — it just arrived through a new door.
+`@/lib/media/storage` â€” it just arrived through a new door.
 
 ---
 
-## D-039 — Head snippets mount in the root layout, gated on the path
+## D-039 â€” Head snippets mount in the root layout, gated on the path
 
 **Date:** 2026-11-21
 **Status:** Accepted
@@ -548,24 +548,25 @@ into `<head>`. Snippets saved to `head` were silently never injected.
 **Consequences.** All three locations now work. The admin gate is checked in the root
 layout rather than relying on the snippet's own `pageScope`, so a snippet scoped to `/`
 still cannot reach the admin tree. The root layout is now async and reads headers, which
-makes every route dynamic — already true for this app, since the public layout reads the
+makes every route dynamic â€” already true for this app, since the public layout reads the
 database on every request.
 
 ---
 
-## D-040 — Rate limiting is in-process, with the account lockout as the durable ceiling
+## D-040 â€” Rate limiting is in-process, with the account lockout as the durable ceiling
 
 **Date:** 2026-11-21
 **Status:** Accepted
 
-**Context.** MVP.md §8.1 asks for a global middleware limiter and per-endpoint
+**Context.** MVP.md Â§8.1 asks for a global middleware limiter and per-endpoint
 limits. The obvious production answer is Redis or Upstash, but neither is
 configured, and the Next docs are explicit that the proxy must not do slow data
 fetching on every request.
 
 **Decision.** src/lib/security/proxy-limiter.ts is an in-process fixed-window
 counter with an opportunistic sweep. The rules are pure data in
-ate-limit-rules.ts so the proxy and the Server Actions share them. The
+
+ate-limit-rules.ts so the proxy and the Server Actions share them. The
 per-account login lockout remains the durable ceiling; the IP limiter is a cheap
 first gate.
 
@@ -576,12 +577,12 @@ instance, this must be revisited before launch.
 
 ---
 
-## D-041 — Blocking is by address only; leads and logs keep hashes, not IPs
+## D-041 â€” Blocking is by address only; leads and logs keep hashes, not IPs
 
 **Date:** 2026-11-21
 **Status:** Accepted
 
-**Context.** MVP.md §8.2 asks for a one-click "Block this IP" from a lead or a log
+**Context.** MVP.md Â§8.2 asks for a one-click "Block this IP" from a lead or a log
 entry. Phase 7 deliberately stores only ipHash, a salted per-day hash, and never
 the raw address.
 
@@ -598,12 +599,12 @@ where the operator supplies the address. Neither is done here.
 
 ---
 
-## D-042 — Staff accounts are created with a set password, not an emailed invite
+## D-042 â€” Staff accounts are created with a set password, not an emailed invite
 
 **Date:** 2026-11-21
 **Status:** Accepted
 
-**Context.** MVP.md §8.4 asks for invite-by-email through Resend. Resend is still
+**Context.** MVP.md Â§8.4 asks for invite-by-email through Resend. Resend is still
 not configured, the same blocker that deferred password reset in Phase 5.
 
 **Decision.** Adding a staff account creates it with a password the owner sets and
@@ -613,3 +614,50 @@ implying an email was sent.
 **Consequences.** The flow works today without a mail provider. When Resend is
 configured, the invite can be switched to a single-use token without changing the
 repository or the permission rules; only the delivery step changes.
+
+---
+
+## D-043 — Retention sorts by the date in the filename, never by mtime
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** The backup retention step deletes files. The obvious shell idiom,
+`ls -1t | tail -n +4 | xargs rm`, sorts by modification time. Over SFTP, mtime
+reflects when the upload finished, not when the backup was taken, so an
+out-of-order upload can make an old archive look newest — and the step then
+deletes a good one.
+
+**Decision.** Retention lives in `planRetention` in `src/lib/backup/rules.ts`,
+sorts by the `YYYY-MM-DD` in the filename, and only ever considers names matching
+`backup-YYYY-MM-DD.sql.gz.age`. Anything unrecognised is returned as `ignored`
+and never deleted. The workflow mirrors this with an anchored `grep -E` and a
+`sort -r` on the name.
+
+**Consequences.** A misnamed archive is never cleaned up automatically; it has to
+be removed by hand. That is the correct trade: the retention step has no business
+deleting a file it cannot date. The function is unit-tested precisely because a
+bug here destroys data rather than showing an error.
+
+---
+
+## D-044 — The admin "run backup" button fails loudly when unconfigured
+
+**Date:** 2026-11-21
+**Status:** Accepted
+
+**Context.** Triggering a GitHub Actions workflow from the admin panel needs a
+token with `actions:write`. That token will not exist in development, and may not
+exist in production if the owner has not created it.
+
+**Decision.** `dispatchBackupWorkflow` returns a specific, actionable message for
+each failure — missing token, missing repository, 401/403, 404, network error —
+and the action writes a `failed` row to `backups_log` with that message. The
+button never reports success it cannot prove.
+
+**Consequences.** In development the button always fails, visibly and correctly.
+The alternative — a button that silently does nothing — is worse, because the
+owner would believe a backup had been taken.
+
+
+---

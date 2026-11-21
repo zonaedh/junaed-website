@@ -1,0 +1,95 @@
+name: CI
+
+# Continuous integration (MVP.md §9.2).
+#
+# Runs the same four gates the project manual requires before any phase is
+# called complete: lint, typecheck, unit tests, build. If this workflow is green,
+# a human still needs to review the change — but if it is red, nobody needs to.
+#
+# The build step gets throwaway values for the secrets it reads at module load.
+# They are deliberately fake: this proves the build does not depend on a real
+# database or a real key, which is exactly the failure mode that bites when a
+# preview deploy is the first place a missing variable is discovered.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A new push to the same branch cancels the previous run: the older result is
+# already stale and the queue is better spent on the newer commit.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+        env:
+          # Placeholder values so the build can run without production secrets.
+          # None of these are real; they exist to satisfy module-load checks.
+          NODE_ENV: production
+          NEXT_PUBLIC_SITE_URL: https://junaedhossain.com
+          ADMIN_URL: https://admin.junaedhossain.com
+          SESSION_SECRET: ci-placeholder-session-secret-not-used-in-production-000
+          ENCRYPTION_KEY: ci-placeholder-encryption-key-not-used-in-production-0000
+          CAPTCHA_SECRET: ci-placeholder-captcha-secret-not-used-in-production-000
+          IP_HASH_SALT: ci-placeholder-ip-hash-salt-not-used-in-production-000000
+          DATABASE_URL: postgres://ci:ci@127.0.0.1:5432/ci
+          DATABASE_URL_UNPOOLED: postgres://ci:ci@127.0.0.1:5432/ci
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Fails on high and critical advisories only. Reporting every low advisory
+      # in a transitive dependency trains people to ignore the job, which is the
+      # opposite of what a security gate is for.
+      - name: npm audit (high and critical)
+        run: npm audit --audit-level=high

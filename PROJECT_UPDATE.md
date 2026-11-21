@@ -1,7 +1,7 @@
 ﻿# PROJECT_UPDATE.md
 Human-readable status of **junaedhossain.com + admin panel**. Update at every phase end and major event.
 
-**Last updated:** 2026-11-21 Â· **Overall progress:** 8.7 / 10 phases
+**Last updated:** 2026-11-21 Â· **Overall progress:** 9.7 / 10 phases
 
 ## Phase Status
 | # | Phase | Status | Started | Completed | Log |
@@ -15,7 +15,7 @@ Human-readable status of **junaedhossain.com + admin panel**. Update at every ph
 | 6 | On-Page SEO | âœ… Complete (verified end-to-end) | 2026-11-21 | 2026-11-21 | [phase-06](logs/phase-06-log.md) |
 | 7 | Analytics, Tracking, Dashboard | âœ… Complete (verified in a browser and over HTTP) | 2026-11-21 | 2026-11-21 | [phase-07](logs/phase-07-log.md) |
 | 8 | Security, IP Block, Logs, Staff | âœ… Complete (verified in a browser and over HTTP) | 2026-11-21 | 2026-11-21 | [phase-08](logs/phase-08-log.md) |
-| 9 | Backups, CI/CD, QA, Launch | â¬œ | | | |
+| 9 | Backups, CI/CD, QA, Launch | âœ… Built and verified locally; launch blocked on 4 owner credentials | 2026-11-21 | 2026-11-21 | [phase-09](logs/phase-09-log.md) |
 
 Legend: â¬œ not started Â· ðŸŸ¨ in progress Â· âœ… complete Â· â›” blocked
 
@@ -25,6 +25,14 @@ Legend: â¬œ not started Â· ðŸŸ¨ in progress Â· âœ… complete Â· 
 - Repo: https://github.com/zonaedh/junaed-website (Phases 0â€“8 pushed) Â· Vercel project: not created
 
 ## Changelog (newest first)
+- 2026-11-21 â€” **Phase 9 complete (code); launch blocked.** Weekly encrypted backup
+  workflow (pg_dump â†’ gzip â†’ age â†’ SFTP â†’ verify size â†’ prune to newest 3 â†’ log â†’
+  Telegram), with retention as pure tested logic that sorts by filename date and
+  never deletes a file it cannot date. Admin Backups page with staleness banner, a
+  run-now button that fails loudly when unconfigured, and a restore guide. CI
+  workflow (lint, typecheck, tests, build, audit) and a manual-approval migration
+  workflow. QA checklist and launch runbook in `docs/`. Launch blocked on Vercel,
+  Neon, R2 and Resend.
 - 2026-11-21 â€” **Phase 8 complete.** Rate limiting (global 120/min, API 60/min, login
   5/15 min, reset 3/hour, contact burst and daily) enforced in the proxy with 429 and
   `Retry-After`. IP/CIDR block list with a 60-second cache, enforced on public and admin

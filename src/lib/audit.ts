@@ -94,4 +94,7 @@ export const ACTIONS = {
   staffActivated: "staff.activated",
   staffPasswordResetForced: "staff.password_reset.forced",
   staffSessionsRevoked: "staff.sessions.revoked",
+  // Phase 9 — backups
+  backupRequested: "backup.requested",
+  backupFailed: "backup.failed",
 } as const;

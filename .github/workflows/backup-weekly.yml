@@ -1,0 +1,202 @@
+name: Weekly backup
+
+# Weekly encrypted database backup (MVP.md §9.1).
+#
+# Every Sunday at 02:00 UTC, plus a manual trigger. The admin panel's "Run backup
+# now" button dispatches this same workflow, so there is one code path and not
+# two that can drift.
+#
+# The retention rule is the dangerous part: it deletes files. It only ever
+# considers names matching `backup-YYYY-MM-DD.sql.gz.age`, and it sorts by the
+# date in the name rather than by mtime, because SFTP uploads can arrive out of
+# order. Anything it does not recognise is left alone. This mirrors
+# `planRetention` in src/lib/backup/rules.ts, which is unit-tested.
+
+on:
+  schedule:
+    - cron: "0 2 * * 0" # Sunday 02:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: backup-weekly
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: Dump, encrypt, upload, prune
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      # Retention: keep this many, hard-delete the rest.
+      BACKUP_KEEP: "3"
+      REMOTE_DIR: ${{ secrets.CPANEL_BACKUP_DIR }}
+      SFTP_HOST: ${{ secrets.CPANEL_SFTP_HOST }}
+      SFTP_PORT: ${{ secrets.CPANEL_SFTP_PORT }}
+      SFTP_USER: ${{ secrets.CPANEL_SFTP_USER }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client age openssh-client
+
+      - name: Write the SFTP key
+        env:
+          SFTP_KEY: ${{ secrets.CPANEL_SFTP_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SFTP_KEY" > ~/.ssh/backup_key
+          chmod 600 ~/.ssh/backup_key
+          # Pin the host key so the upload cannot be silently redirected.
+          ssh-keyscan -p "$SFTP_PORT" -H "$SFTP_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Dump the database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_UNPOOLED }}
+        run: |
+          set -euo pipefail
+          STAMP="$(date -u +%Y-%m-%d)"
+          NAME="backup-${STAMP}.sql.gz.age"
+          echo "BACKUP_NAME=$NAME" >> "$GITHUB_ENV"
+
+          # --no-owner / --no-privileges so a restore into a different role works.
+          pg_dump --no-owner --no-privileges --format=plain "$DATABASE_URL" \
+            | gzip -9 > /tmp/dump.sql.gz
+
+          # Encrypt before the file ever leaves the runner. Backups contain leads
+          # and user records, so an unencrypted archive on a shared host is not
+          # acceptable.
+          age -r "${{ secrets.BACKUP_AGE_PUBLIC_KEY }}" \
+            -o "/tmp/${NAME}" /tmp/dump.sql.gz
+
+          # A zero-byte archive is a failed backup that looks like a success.
+          SIZE=$(stat -c%s "/tmp/${NAME}")
+          if [ "$SIZE" -le 0 ]; then
+            echo "::error::Encrypted archive is empty."
+            exit 1
+          fi
+          echo "BACKUP_SIZE=$SIZE" >> "$GITHUB_ENV"
+          echo "Archive: ${NAME} (${SIZE} bytes)"
+
+      - name: Upload over SFTP
+        run: |
+          set -euo pipefail
+          sftp -P "$SFTP_PORT" -i ~/.ssh/backup_key \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$SFTP_USER@$SFTP_HOST" <<EOF
+          -mkdir ${REMOTE_DIR}
+          cd ${REMOTE_DIR}
+          put /tmp/${BACKUP_NAME}
+          ls -l ${BACKUP_NAME}
+          EOF
+
+      - name: Verify the upload
+        run: |
+          set -euo pipefail
+          REMOTE_SIZE=$(sftp -P "$SFTP_PORT" -i ~/.ssh/backup_key \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$SFTP_USER@$SFTP_HOST" <<EOF | awk '/'"${BACKUP_NAME}"'/ {print $5}'
+          cd ${REMOTE_DIR}
+          ls -l ${BACKUP_NAME}
+          EOF
+          )
+          LOCAL_SIZE=$(stat -c%s "/tmp/${BACKUP_NAME}")
+          if [ -z "$REMOTE_SIZE" ] || [ "$REMOTE_SIZE" != "$LOCAL_SIZE" ]; then
+            echo "::error::Size mismatch after upload (local=$LOCAL_SIZE remote=${REMOTE_SIZE:-missing})."
+            exit 1
+          fi
+          echo "Upload verified: ${REMOTE_SIZE} bytes."
+
+      - name: Prune old archives
+        run: |
+          set -euo pipefail
+          # List only files matching the contract, newest first by the date in
+          # the name. Anything unrecognised is never listed and never deleted.
+          sftp -P "$SFTP_PORT" -i ~/.ssh/backup_key \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$SFTP_USER@$SFTP_HOST" <<EOF > /tmp/remote_list.txt
+          cd ${REMOTE_DIR}
+          ls -1
+          EOF
+
+          grep -E '^backup-[0-9]{4}-[0-9]{2}-[0-9]{2}\.sql\.gz\.age$' /tmp/remote_list.txt \
+            | sort -r > /tmp/dated.txt || true
+
+          TOTAL=$(wc -l < /tmp/dated.txt)
+          echo "Found ${TOTAL} dated archive(s); keeping ${BACKUP_KEEP}."
+
+          if [ "$TOTAL" -le "$BACKUP_KEEP" ]; then
+            echo "Nothing to prune."
+            exit 0
+          fi
+
+          tail -n +$((BACKUP_KEEP + 1)) /tmp/dated.txt > /tmp/to_delete.txt
+          echo "Deleting:"
+          cat /tmp/to_delete.txt
+
+          {
+            echo "cd ${REMOTE_DIR}"
+            while read -r f; do
+              [ -n "$f" ] && echo "rm ${f}"
+            done < /tmp/to_delete.txt
+          } | sftp -P "$SFTP_PORT" -i ~/.ssh/backup_key \
+              -o BatchMode=yes -o StrictHostKeyChecking=yes \
+              "$SFTP_USER@$SFTP_HOST"
+
+      - name: Record success
+        if: success()
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_UNPOOLED }}
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<SQL
+          INSERT INTO backups_log (filename, size, status, message)
+          VALUES ('${BACKUP_NAME}', ${BACKUP_SIZE}, 'success',
+                  'Uploaded to cPanel and verified.');
+          SQL
+
+      - name: Record failure
+        if: failure()
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_UNPOOLED }}
+        run: |
+          # Best effort: the backup already failed, so a logging failure must not
+          # mask the real error.
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=0 <<SQL || true
+          INSERT INTO backups_log (filename, size, status, message)
+          VALUES ('${BACKUP_NAME:-backup-unknown}', NULL, 'failed',
+                  'Workflow failed. See the Actions run for the step that broke.');
+          SQL
+
+      - name: Notify Telegram
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+            echo "Telegram is not configured; skipping the notification."
+            exit 0
+          fi
+          if [ "${{ job.status }}" = "success" ]; then
+            TEXT="Backup OK: ${BACKUP_NAME} (${BACKUP_SIZE} bytes)"
+          else
+            TEXT="Backup FAILED: ${BACKUP_NAME:-unknown}. Check the Actions run."
+          fi
+          curl -sS --fail -X POST \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${TEXT}" > /dev/null
+
+      - name: Clean up the runner
+        if: always()
+        run: rm -f /tmp/dump.sql.gz "/tmp/${BACKUP_NAME:-none}" ~/.ssh/backup_key
