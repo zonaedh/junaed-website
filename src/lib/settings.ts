@@ -28,10 +28,19 @@ export * from "./settings-registry";
  */
 const readSettings = unstable_cache(
   async (): Promise<SiteSettings> => {
-    const rows = await db
-      .select({ key: settingsTable.key, value: settingsTable.value })
-      .from(settingsTable);
-    return resolveSettings(rows);
+    try {
+      const rows = await db
+        .select({ key: settingsTable.key, value: settingsTable.value })
+        .from(settingsTable);
+      return resolveSettings(rows);
+    } catch {
+      // Build-time and offline fallback. `next build` prerenders /sitemap.xml
+      // and /robots.txt, which both read SEO defaults, so a build with no
+      // reachable database would otherwise fail outright. Settings are chrome,
+      // not content: the registry's defaults are a correct, complete site.
+      // The admin form uses getSettingsForEdit below, which stays loud.
+      return resolveSettings([]);
+    }
   },
   ["site-settings"],
   { tags: ["settings"], revalidate: false },
